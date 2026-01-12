@@ -1,0 +1,48 @@
+{
+  "name": "parking-app-backend",
+  "version": "1.0.0",
+  "description": "Parking management system backend",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cors": "latest",
+    "dotenv": "^17.2.3",
+    "express": "latest",
+    "fs": "latest",
+    "jiti": "latest",
+    "less": "latest",
+    "lightningcss": "latest",
+    "lucide-react": "^0.454.0",
+    "next": "16.0.3",
+    "node-gyp": "latest",
+    "path": "latest",
+    "pg": "^8.16.3",
+    "react": "19.2.0",
+    "react-dom": "latest",
+    "sass": "latest",
+    "sass-embedded": "latest",
+    "sqlite3": "^5.1.7",
+    "stylus": "latest",
+    "sugarss": "latest",
+    "tailwind-merge": "^2.5.5",
+    "tailwindcss-animate": "^1.0.7",
+    "terser": "latest",
+    "tsx": "latest",
+    "vite": "latest",
+    "yaml": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "19.2.6",
+    "@types/react-dom": "19.2.3",
+    "postcss": "^8.5",
+    "tailwindcss": "4.1.17",
+    "typescript": "^5"
+  }
+}

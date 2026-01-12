@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.pnpm-debug.log*
+
+# Local Databases (CRITICAL: Don't push your local DB to the cloud)
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment Variables
+.env
+.env.local
+.env.production
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor folders
+.vscode/
+.idea/
+.DS_Store
+
+# Frontend Build artifacts
+frontend/dist/
+frontend/build/

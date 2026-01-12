@@ -1,0 +1,78 @@
+.permits-page {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.page-header h2 {
+  color: #333;
+  font-size: 20px;
+}
+
+.permit-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.permit-form > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.permit-form label {
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+.permit-form select,
+.permit-form input {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.cost-display {
+  grid-column: 1 / -1;
+  padding: 12px;
+  background: #f0f7ff;
+  border: 1px solid #cce5ff;
+  border-radius: 4px;
+  color: #0066cc;
+}
+
+.permits-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.permits-table th {
+  background: #f5f5f5;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #ddd;
+}
+
+.permits-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  color: #666;
+}
+
+.permits-table tr:hover {
+  background: #f9f9f9;
+}
