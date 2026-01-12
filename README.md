@@ -70,11 +70,11 @@ Open your browser and go to `http://localhost:3000`
 
 | Role | Username | Password |
 |------|----------|----------|
-| Admin | artie | 2020 |
-| Admin | david | 2020 |
-| Admin | marc | 2020 |
-| Admin | it | 2020 |
-| Front Desk | frontdesk | 1234 |
+| Admin | artie ||
+| Admin | david ||
+| Admin | marc ||
+| Admin | it ||
+| Front Desk | frontdesk ||
 
 ## Features by Role
 
