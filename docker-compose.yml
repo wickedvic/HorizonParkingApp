@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .           # Looks at the root to find pnpm-lock.yaml
+      dockerfile: ./backend/Dockerfile
+    ports:
+      - "5001:5001"
+    volumes:
+      - parking_sqlite_data:/app/backend/data  # Persists your .db file
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=/app/backend/data/parking.db
+    restart: always
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  parking_sqlite_data:      # Managed by Docker on your VPS
