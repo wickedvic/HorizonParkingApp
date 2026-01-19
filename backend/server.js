@@ -137,6 +137,8 @@ function seedDatabase() {
 
 // Auth
 app.post("/api/auth/login", (req, res) => {
+  console.log("Login attempt:", req.body)
+
   const { username, password } = req.body
   db.get("SELECT * FROM users WHERE username = ? AND password = ?", [username, password], (err, user) => {
     if (err) return res.status(500).json({ error: "Database error" })
