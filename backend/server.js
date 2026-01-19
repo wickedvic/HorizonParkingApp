@@ -506,6 +506,7 @@ app.get("/api/reports", (req, res) => {
 initializeDatabase()
 
 const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log("PORT", PORT)
   console.log(`Server running on http://localhost:${PORT}`)
   console.log(`API is ready to accept requests`)
 })
