@@ -1,14 +1,18 @@
-# Stage 1: Install Dependencies
 FROM node:24-alpine AS builder
-RUN npm install -g pnpm
+
+# Set pnpm home and path for Alpine compatibility
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+
+RUN corepack enable pnpm
 
 WORKDIR /app
 
-# Copy the root lockfile and backend package definition
+# Copy root lockfile AND backend package.json
 COPY pnpm-lock.yaml ./
 COPY backend/package.json ./backend/
 
-# Install only backend dependencies
+# If exit code 1 persists, remove --frozen-lockfile temporarily to debug
 RUN pnpm install --filter ./backend --frozen-lockfile
 
 # Stage 2: Final Image
