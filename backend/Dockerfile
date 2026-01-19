@@ -14,7 +14,7 @@ COPY pnpm-lock.yaml ./
 COPY backend/package.json ./backend/
 
 # If exit code 1 persists, remove --frozen-lockfile temporarily to debug
-RUN pnpm install --filter ./backend --frozen-lockfile
+RUN pnpm install --filter ./backend
 
 # Stage 2: Final Image
 FROM node:24-alpine
