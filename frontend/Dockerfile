@@ -18,5 +18,6 @@ RUN pnpm run build
 FROM nginx:stable-alpine
 # Vite build output is in 'dist'
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
