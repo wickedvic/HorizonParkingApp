@@ -1,5 +1,6 @@
 {
   "name": "parking-app-root",
   "private": true,
-  "description": "Monorepo root for Horizon Parking App"
+  "description": "Monorepo root for Horizon Parking App",
+  "packageManager": "pnpm@9.0.0"
 }

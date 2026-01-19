@@ -1,4 +1,5 @@
 FROM node:24-alpine AS builder
+RUN npm install -g pnpm@latest
 
 # Set pnpm home and path for Alpine compatibility
 ENV PNPM_HOME="/pnpm"
