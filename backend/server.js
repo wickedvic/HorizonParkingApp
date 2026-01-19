@@ -4,8 +4,9 @@ const sqlite3 = require("sqlite3").verbose()
 const path = require("path")
 const fs = require("fs")
 
+
 const app = express()
-const PORT = process.env.PORT
+const PORT = process.env.PORT || 5001
 
 // Middleware
 app.use(cors())
@@ -504,7 +505,7 @@ app.get("/api/reports", (req, res) => {
 
 initializeDatabase()
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on http://localhost:${PORT}`)
   console.log(`API is ready to accept requests`)
 })
