@@ -6,13 +6,11 @@ WORKDIR /app
 COPY pnpm-lock.yaml ./
 COPY backend/package.json ./backend/
 
-# Install dependencies - no native build tools required for MySQL
+# Install dependencies - no native build tools needed for mysql2
 RUN pnpm install --filter ./backend
 
 # Copy backend source code
 COPY backend/ ./backend/
-
-# Move into the backend directory
 WORKDIR /app/backend
 
 EXPOSE 5001
