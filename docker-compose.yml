@@ -1,6 +1,24 @@
 version: '3.8'
 
 services:
+  database:
+    image: mysql:latest
+    container_name: parkingapp-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: parkingapp_data
+      MYSQL_USER: parkingapp_user
+      MYSQL_PASSWORD: strong_app_password
+      MYSQL_ROOT_PASSWORD: strong_root_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+
   backend:
     build:
       context: .           # Looks at the root to find pnpm-lock.yaml
@@ -9,10 +27,18 @@ services:
       - "5001:5001"
     volumes:
       - parking_sqlite_data:/app/backend/data  # Persists your .db file
+    depends_on:
+      mysql:
+        condition: service_healthy
     environment:
       - NODE_ENV=production
       - DATABASE_URL=/app/backend/data/parking.db
-    restart: always
+      - DB_HOST: mysql
+      - DB_PORT: 3306
+      - DB_NAME: parkingapp_data
+      - DB_USER: parkingapp_user
+      - DB_PASSWORD: strong_app_password
+    restart: unless-stopped
 
   frontend:
     build:
@@ -25,4 +51,4 @@ services:
     restart: always
 
 volumes:
-  parking_sqlite_data:      # Managed by Docker on your VPS
+  mysql_data:      # Managed by Docker on your VPS
