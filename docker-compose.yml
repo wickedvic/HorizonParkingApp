@@ -13,7 +13,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
       retries: 15
@@ -21,23 +21,20 @@ services:
 
   backend:
     build:
-      context: .           # Looks at the root to find pnpm-lock.yaml
+      context: .
       dockerfile: ./backend/Dockerfile
     ports:
       - "5001:5001"
-    volumes:
-      - parking_sqlite_data:/app/backend/data  # Persists your .db file
     depends_on:
-      mysql:
+      database:
         condition: service_healthy
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=/app/backend/data/parking.db
-      - DB_HOST: mysql
-      - DB_PORT: 3306
-      - DB_NAME: parkingapp_data
-      - DB_USER: parkingapp_user
-      - DB_PASSWORD: strong_app_password
+      - DB_HOST=database
+      - DB_PORT=3306
+      - DB_NAME=parkingapp_data
+      - DB_USER=parkingapp_user
+      - DB_PASSWORD=strong_app_password
     restart: unless-stopped
 
   frontend:
@@ -45,10 +42,10 @@ services:
       context: .
       dockerfile: ./frontend/Dockerfile
     ports:
-      - "80:80"
+      - "29080:80"
     depends_on:
       - backend
     restart: always
 
 volumes:
-  mysql_data:      # Managed by Docker on your VPS
+  mysql_data:
