@@ -9,7 +9,7 @@ WORKDIR /app
 COPY pnpm-lock.yaml ./
 COPY backend/package.json ./backend/
 
-RUN pnpm install --filter ./backend --frozen-lockfile
+RUN pnpm install --filter ./backend
 
 # Stage 2: Final Image
 FROM node:24-alpine
