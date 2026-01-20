@@ -27,6 +27,7 @@
     "react-dom": "latest",
     "sass": "latest",
     "sass-embedded": "latest",
+    "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
     "stylus": "latest",
     "sugarss": "latest",

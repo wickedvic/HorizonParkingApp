@@ -1,23 +1,28 @@
-const express = require("express")
-const cors = require("cors")
-const sqlite3 = require("sqlite3").verbose()
-const path = require("path")
-const fs = require("fs")
+require('dotenv').config(); // Load environment variables
+const express = require("express");
+const cors = require("cors");
+const sqlite3 = require("sqlite3").verbose();
+const path = require("path");
+const fs = require("fs");
 
-
-const app = express()
-const PORT = process.env.PORT || 5001
+const app = express();
+const PORT = process.env.PORT || 5001;
 
 // Middleware
-app.use(cors())
-app.use(express.json())
+app.use(cors());
+app.use(express.json());
 
-// Database setup
-const dbPath = path.join(__dirname, "parking.db")
+// Database setup - Pointing to 'data' folder for Docker persistence
+const dataDir = path.join(__dirname, "data");
+if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir);
+}
+const dbPath = path.join(dataDir, "parking.db");
+
 const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) console.error("Database error:", err)
-  else console.log("Connected to SQLite database")
-})
+  if (err) console.error("Database error:", err.message);
+  else console.log(`Connected to SQLite database at: ${dbPath}`);
+});
 
 // Initialize database tables
 function initializeDatabase() {
@@ -95,7 +100,7 @@ function initializeDatabase() {
 
 function seedDatabase() {
   db.get("SELECT COUNT(*) as count FROM users", (err, row) => {
-    if (err) return
+    if (err || !row) return
     if (row.count === 0) {
       console.log("Seeding extensive database...")
       
@@ -392,7 +397,6 @@ app.post("/api/payments/generate-monthly", (req, res) => {
         // AUTO-EXTEND CHECK: Is this permit expired?
         if (permit.end_date < today) {
             // It's expired. Standard Monthly Renew.
-            // Extend end_date by 1 month.
             const newEndDate = new Date(new Date(today).setDate(new Date(today).getDate() + 30)).toISOString().split('T')[0];
             const addedCost = permit.daily_rate; // This is the monthly rate
             const newTotalCost = permit.total_cost + addedCost;
@@ -503,11 +507,11 @@ app.get("/api/reports", (req, res) => {
   })
 })
 
+// Initialize the DB structure
 initializeDatabase()
 
-const server = app.listen(PORT, () => {
-  console.log("PORT", PORT)
-  console.log(`Server running on http://localhost:${PORT}`)
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`)
   console.log(`API is ready to accept requests`)
 })
-
