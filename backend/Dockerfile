@@ -1,30 +1,22 @@
+# Stage 1: Build
 FROM node:24-alpine AS builder
-RUN npm install -g pnpm@latest
-
-# Set pnpm home and path for Alpine compatibility
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+# Install build tools needed for native modules like SQLite3
+RUN apk add --no-cache python3 make g++ 
 
 RUN corepack enable pnpm
-
 WORKDIR /app
 
-# Copy root lockfile AND backend package.json
 COPY pnpm-lock.yaml ./
 COPY backend/package.json ./backend/
 
-# If exit code 1 persists, remove --frozen-lockfile temporarily to debug
-RUN pnpm install --filter ./backend
+RUN pnpm install --filter ./backend --frozen-lockfile
 
 # Stage 2: Final Image
 FROM node:24-alpine
 WORKDIR /app
-RUN npm install -g pnpm
 
-# Copy node_modules from builder
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/backend/node_modules ./backend/node_modules
-COPY backend/ ./backend/
+# Copy EVERYTHING from builder to ensure native modules are kept
+COPY --from=builder /app /app
 
 # Create a folder for the SQLite database persistence
 RUN mkdir -p /app/backend/data
