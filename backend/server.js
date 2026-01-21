@@ -109,7 +109,7 @@ async function seedDatabase() {
 }
 
 // --- AUTH ---
-app.post("/api/auth/login", async (req, res) => {
+app.post(process.env.URL + "/api/auth/login", async (req, res) => {
   const { username, password } = req.body;
   try {
     const [rows] = await pool.query("SELECT * FROM users WHERE username = ? AND password = ?", [username, password]);
