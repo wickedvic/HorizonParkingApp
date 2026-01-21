@@ -17,7 +17,7 @@ export default function ReportsPage({ user }) {
 
   const loadReports = async (start, end) => {
     try {
-      let url = `${API_BASE_URL}/api/reports`
+      let url = `${API_BASE_URL}/reports`
       // Use arguments if provided, otherwise use state
       const s = start !== undefined ? start : startDate;
       const e = end !== undefined ? end : endDate;

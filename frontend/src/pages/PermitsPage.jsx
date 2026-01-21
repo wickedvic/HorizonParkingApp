@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-const API_BASE_URL = "http://localhost:5001"
+import API_BASE_URL from "../api.js"
 import "./PermitsPage.css"
 
 export default function PermitsPage({ user }) {
@@ -35,7 +35,7 @@ export default function PermitsPage({ user }) {
 
   const loadPermits = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/permits`)
+      const res = await fetch(`${API_BASE_URL}/permits`)
       const data = await res.json()
       setPermits(data)
     } catch (err) { console.error("Failed to load permits:", err) }
@@ -43,7 +43,7 @@ export default function PermitsPage({ user }) {
 
   const loadCars = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/cars`)
+      const res = await fetch(`${API_BASE_URL}/cars`)
       const data = await res.json()
       data.sort((a, b) => a.first_name.localeCompare(b.first_name))
       setCars(data)
@@ -53,7 +53,7 @@ export default function PermitsPage({ user }) {
   const handleDeletePermit = async (id) => {
     if (window.confirm("Are you sure you want to delete this permit?")) {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/permits/${id}`, { method: 'DELETE' })
+        const res = await fetch(`${API_BASE_URL}/permits/${id}`, { method: 'DELETE' })
         if (res.ok) loadPermits()
       } catch (err) { console.error("Error deleting permit:", err) }
     }
@@ -95,7 +95,7 @@ export default function PermitsPage({ user }) {
     const permitNumber = `PMT-${Date.now()}`
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/permits`, {
+      const res = await fetch(`${API_BASE_URL}/permits`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

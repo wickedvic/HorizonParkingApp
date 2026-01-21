@@ -19,7 +19,7 @@ export default function PaymentsPage({ user, onUpdate }) {
 
   const loadPayments = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/payments`)
+      const res = await fetch(`${API_BASE_URL}/payments`)
       const data = await res.json()
       setPayments(data)
     } catch (err) {
@@ -30,7 +30,7 @@ export default function PaymentsPage({ user, onUpdate }) {
   const handleDeletePayment = async (id) => {
       if (window.confirm("Are you sure you want to delete this payment record?")) {
           try {
-              const res = await fetch(`${API_BASE_URL}/api/payments/${id}`, { method: 'DELETE' });
+              const res = await fetch(`${API_BASE_URL}/payments/${id}`, { method: 'DELETE' });
               if (res.ok) {
                   loadPayments();
                   onUpdate();
@@ -48,7 +48,7 @@ export default function PaymentsPage({ user, onUpdate }) {
     }
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE_URL}/api/payments/${paymentId}`, {
+      const res = await fetch(`${API_BASE_URL}/payments/${paymentId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_paid: true }),
@@ -71,7 +71,7 @@ export default function PaymentsPage({ user, onUpdate }) {
     }
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE_URL}/api/payments/${paymentId}`, {
+      const res = await fetch(`${API_BASE_URL}/payments/${paymentId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_paid: false }),
@@ -91,7 +91,7 @@ export default function PaymentsPage({ user, onUpdate }) {
     if (!confirm("Are you sure you want to generate invoices for all active monthly permits for this month?")) return
     setGenerating(true)
     try {
-      const res = await fetch(`${API_BASE_URL}/api/payments/generate-monthly`, { method: "POST" })
+      const res = await fetch(`${API_BASE_URL}/payments/generate-monthly`, { method: "POST" })
       const data = await res.json()
       if (res.ok) {
         alert(data.message)

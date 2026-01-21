@@ -15,7 +15,7 @@ export default function CarsPage({ user, onNavigateClient }) {
 
   const loadCars = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/cars`)
+      const res = await fetch(`${API_BASE_URL}/cars`)
       const data = await res.json()
       setCars(data)
     } catch (err) {
@@ -26,7 +26,7 @@ export default function CarsPage({ user, onNavigateClient }) {
   const handleDeleteCar = async (id, plate) => {
       if (window.confirm(`Are you sure you want to delete vehicle ${plate}? This will also delete associated permits.`)) {
           try {
-              const res = await fetch(`${API_BASE_URL}/api/cars/${id}`, { method: 'DELETE' });
+              const res = await fetch(`${API_BASE_URL}/cars/${id}`, { method: 'DELETE' });
               if (res.ok) {
                   loadCars();
               }
