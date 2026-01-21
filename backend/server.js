@@ -126,7 +126,7 @@ app.post("/api/auth/login", async (req, res) => {
 });
 
 // --- CLIENTS ---
-app.get("/api/clients", async (req, res) => {
+app.get("/clients", async (req, res) => {
   const today = new Date().toISOString().split("T")[0];
   try {
     const [rows] = await pool.query(`
@@ -137,7 +137,7 @@ app.get("/api/clients", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post("/api/clients", async (req, res) => {
+app.post("/clients", async (req, res) => {
   const { first_name, last_name, email, phone, client_type } = req.body;
   try {
     const [result] = await pool.query(
@@ -148,7 +148,7 @@ app.post("/api/clients", async (req, res) => {
   } catch (err) { res.status(500).json({ error: "Failed to create client" }); }
 });
 
-app.patch("/api/clients/:id/toggle-active", async (req, res) => {
+app.patch("/clients/:id/toggle-active", async (req, res) => {
   try {
     await pool.query("UPDATE clients SET active = ? WHERE id = ?", [req.body.active ? 1 : 0, req.params.id]);
     res.json({ success: true });
@@ -156,7 +156,7 @@ app.patch("/api/clients/:id/toggle-active", async (req, res) => {
 });
 
 // --- CARS ---
-app.get("/api/cars", async (req, res) => {
+app.get("/cars", async (req, res) => {
   const today = new Date().toISOString().split("T")[0];
   try {
     const [rows] = await pool.query(`
@@ -169,7 +169,7 @@ app.get("/api/cars", async (req, res) => {
 });
 
 // --- PERMITS ---
-app.get("/api/permits", async (req, res) => {
+app.get("/permits", async (req, res) => {
   try {
     const [rows] = await pool.query(`
       SELECT p.*, c.license_plate, cl.first_name, cl.last_name FROM permits p 
@@ -178,7 +178,7 @@ app.get("/api/permits", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post("/api/permits", async (req, res) => {
+app.post("/permits", async (req, res) => {
   const { permit_number, car_id, permit_type, start_date, end_date, daily_rate, total_cost } = req.body;
   try {
     const [result] = await pool.query(
@@ -190,7 +190,7 @@ app.post("/api/permits", async (req, res) => {
 });
 
 // --- REPORTS ---
-app.get("/api/reports", async (req, res) => {
+app.get("/reports", async (req, res) => {
   try {
     const [rows] = await pool.query(`
       SELECT cl.id, cl.first_name, cl.last_name, SUM(pay.amount) as total_paid 
