@@ -101,11 +101,40 @@ async function initializeDatabase() {
 
 async function seedDatabase() {
   try {
-    const [rows] = await pool.query("SELECT COUNT(*) as count FROM users");
-    if (rows[0].count === 0) {
+    // 1. Seed Users
+    const [userRows] = await pool.query("SELECT COUNT(*) as count FROM users");
+    if (userRows[0].count === 0) {
       console.log("Seeding initial users...");
       await pool.query("INSERT INTO users (username, password, role) VALUES (?, ?, ?), (?, ?, ?)", 
         ["artie", "2020", "admin", "frontdesk", "1234", "front_desk"]);
+    }
+
+    // 2. Seed Clients & Dummy Data (Check if clients table is empty)
+    const [clientRows] = await pool.query("SELECT COUNT(*) as count FROM clients");
+    if (clientRows[0].count === 0) {
+      console.log("Seeding dummy data...");
+      
+      // Insert testingClient1
+      const [clientResult] = await pool.query(
+        "INSERT INTO clients (first_name, last_name, email, phone, client_type) VALUES (?, ?, ?, ?, ?)",
+        ["testingClient1", "Dummy", "test1@dummy.com", "555-0001", "employee"]
+      );
+      const clientId = clientResult.insertId;
+
+      // Insert testingClientCar1
+      const [carResult] = await pool.query(
+        "INSERT INTO cars (client_id, license_plate, make, model, color, year) VALUES (?, ?, ?, ?, ?, ?)",
+        [clientId, "DUMMY-01", "Tesla", "Model S", "Red", 2024]
+      );
+      const carId = carResult.insertId;
+
+      // Insert Dummy Permit
+      await pool.query(
+        "INSERT INTO permits (permit_number, car_id, permit_type, start_date, end_date, daily_rate, total_cost) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        ["PERMIT-DUMMY-01", carId, "monthly", "2026-01-01", "2026-02-01", 10.0, 300.0]
+      );
+      
+      console.log("Dummy data seeded successfully.");
     }
   } catch (err) {
     console.error("Seeding error:", err);
@@ -188,7 +217,7 @@ app.post("/permits", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- PAYMENTS & BILLING (Restored) ---
+// --- PAYMENTS & BILLING ---
 app.get("/payments", async (req, res) => {
   try {
     const [rows] = await pool.query(`
