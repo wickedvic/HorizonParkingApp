@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require("express");
 const cors = require("cors");
-const mysql = require("mysql2/promise"); // Using mysql2 for better Docker stability
+const mysql = require("mysql2/promise");
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -9,7 +9,6 @@ const PORT = process.env.PORT || 5001;
 // Middleware
 app.use(cors());
 app.use(express.json());
-
 
 // MySQL Connection Pool
 const dbConfig = {
@@ -114,7 +113,6 @@ async function seedDatabase() {
 }
 
 // --- AUTH ---
-// UPDATED: Removed URL prefix and /api/ to match Nginx proxy_pass
 app.post("/auth/login", async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -127,7 +125,6 @@ app.post("/auth/login", async (req, res) => {
 });
 
 // --- CLIENTS ---
-// UPDATED: Removed /api prefix
 app.get("/clients", async (req, res) => {
   const today = new Date().toISOString().split("T")[0];
   try {
@@ -189,6 +186,52 @@ app.post("/permits", async (req, res) => {
     );
     res.json({ id: result.insertId, ...req.body });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- PAYMENTS & BILLING (Restored) ---
+app.get("/payments", async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT pay.*, cl.first_name, cl.last_name, p.permit_number 
+      FROM payments pay 
+      JOIN clients cl ON pay.client_id = cl.id 
+      JOIN permits p ON pay.permit_id = p.id
+      ORDER BY pay.created_at DESC`);
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.patch("/payments/:id", async (req, res) => {
+  const { is_paid } = req.body;
+  const paid_date = is_paid ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null;
+  try {
+    await pool.query("UPDATE payments SET is_paid = ?, paid_date = ? WHERE id = ?", [is_paid ? 1 : 0, paid_date, req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: "Failed to update payment" }); }
+});
+
+app.post("/payments/generate-monthly", async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [monthlyPermits] = await connection.query("SELECT * FROM permits WHERE permit_type = 'monthly' AND active = 1");
+    for (const permit of monthlyPermits) {
+      await connection.query("INSERT INTO payments (permit_id, client_id, amount, is_paid) VALUES (?, ?, ?, 0)", [permit.id, permit.client_id, permit.total_cost]);
+      await connection.query("UPDATE permits SET end_date = DATE_ADD(end_date, INTERVAL 1 MONTH) WHERE id = ?", [permit.id]);
+    }
+    await connection.commit();
+    res.json({ message: `Generated ${monthlyPermits.length} invoices.` });
+  } catch (err) {
+    await connection.rollback();
+    res.status(500).json({ error: err.message });
+  } finally { connection.release(); }
+});
+
+app.delete("/payments/:id", async (req, res) => {
+  try {
+    await pool.query("DELETE FROM payments WHERE id = ?", [req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: "Failed to delete payment" }); }
 });
 
 // --- REPORTS ---
