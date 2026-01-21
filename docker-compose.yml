@@ -37,7 +37,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
     restart: unless-stopped
 
-frontend:
+  frontend:
     build:
       context: .
       dockerfile: ./frontend/Dockerfile
