@@ -26,7 +26,7 @@ services:
     ports:
       - "5001:5001"
     depends_on:
-      database:
+      mysql:
         condition: service_healthy
     environment:
       - NODE_ENV=production
