@@ -25,7 +25,7 @@ export default function ClientsPage({ user, onUpdate, initialFilter }) {
 
   const loadClients = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/clients`)
+      const res = await fetch(`${API_BASE_URL}/clients`)
       const data = await res.json()
       setClients(data)
     } catch (err) { console.error("Failed to load clients:", err) }
@@ -33,7 +33,7 @@ export default function ClientsPage({ user, onUpdate, initialFilter }) {
 
   const loadCars = async (clientId) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/cars?client_id=${clientId}`)
+      const res = await fetch(`${API_BASE_URL}/cars?client_id=${clientId}`)
       const data = await res.json()
       setCars(data)
     } catch (err) { console.error("Failed to load cars:", err) }
@@ -44,7 +44,7 @@ export default function ClientsPage({ user, onUpdate, initialFilter }) {
       const action = newStatus ? "activate" : "deactivate";
       if (confirm(`Are you sure you want to ${action} ${client.first_name}?`)) {
           try {
-              const res = await fetch(`${API_BASE_URL}/api/clients/${client.id}/toggle-active`, {
+              const res = await fetch(`${API_BASE_URL}/clients/${client.id}/toggle-active`, {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ active: newStatus })
@@ -57,7 +57,7 @@ export default function ClientsPage({ user, onUpdate, initialFilter }) {
   const handleDeleteClient = async (id, name) => {
       if (window.confirm(`Delete ${name}? This will remove all their vehicles and history.`)) {
           try {
-              const res = await fetch(`${API_BASE_URL}/api/clients/${id}`, { method: 'DELETE' });
+              const res = await fetch(`${API_BASE_URL}/clients/${id}`, { method: 'DELETE' });
               if (res.ok) { loadClients(); onUpdate(); }
           } catch (err) { console.error("Error deleting client:", err); }
       }
@@ -65,7 +65,7 @@ export default function ClientsPage({ user, onUpdate, initialFilter }) {
 
   const handleSubmitClient = async (e) => {
     e.preventDefault()
-    const url = editingId ? `${API_BASE_URL}/api/clients/${editingId}` : `${API_BASE_URL}/api/clients`
+    const url = editingId ? `${API_BASE_URL}/clients/${editingId}` : `${API_BASE_URL}/clients`
     const method = editingId ? "PUT" : "POST"
     try {
       const res = await fetch(url, { method: method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) })
@@ -80,7 +80,7 @@ export default function ClientsPage({ user, onUpdate, initialFilter }) {
     e.preventDefault()
     if (!selectedClient) return
     try {
-      const res = await fetch(`${API_BASE_URL}/api/cars`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ client_id: selectedClient.id, ...carForm }) })
+      const res = await fetch(`${API_BASE_URL}/cars`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ client_id: selectedClient.id, ...carForm }) })
       if (res.ok) { loadCars(selectedClient.id); setCarForm({ license_plate: "", make: "", model: "", color: "", year: new Date().getFullYear() }); setShowCarForm(false); }
     } catch (err) { console.error("Failed to add car:", err) }
   }

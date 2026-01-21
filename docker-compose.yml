@@ -43,7 +43,7 @@ services:
       dockerfile: ./frontend/Dockerfile
       args:
         # Change this from the IP:5001 to just /api
-        - VITE_API_BASE_URL=/
+        - VITE_API_BASE_URL=/api
     ports:
       - "29080:80"
     depends_on:
