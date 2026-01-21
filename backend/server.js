@@ -114,7 +114,8 @@ async function seedDatabase() {
 }
 
 // --- AUTH ---
-app.post("/api/auth/login", async (req, res) => {
+// UPDATED: Removed URL prefix and /api/ to match Nginx proxy_pass
+app.post("/auth/login", async (req, res) => {
   const { username, password } = req.body;
   try {
     const [rows] = await pool.query("SELECT * FROM users WHERE username = ? AND password = ?", [username, password]);
@@ -126,6 +127,7 @@ app.post("/api/auth/login", async (req, res) => {
 });
 
 // --- CLIENTS ---
+// UPDATED: Removed /api prefix
 app.get("/clients", async (req, res) => {
   const today = new Date().toISOString().split("T")[0];
   try {
