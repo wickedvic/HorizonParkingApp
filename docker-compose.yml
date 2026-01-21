@@ -12,8 +12,6 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
-    networks:
-      - parkingapp
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
       interval: 10s
@@ -37,8 +35,6 @@ services:
       - DB_NAME=parkingapp_data
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
-    networks:
-      - parkingapp
     restart: unless-stopped
 
   frontend:
@@ -49,8 +45,6 @@ services:
       - "29080:80"
     depends_on:
       - backend
-    networks:
-      - parkingapp
     restart: unless-stopped
 
 volumes:
