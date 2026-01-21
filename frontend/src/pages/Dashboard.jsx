@@ -21,9 +21,9 @@ export default function Dashboard({ user, onLogout }) {
   const loadStats = async () => {
     try {
       const [clients, permits, payments] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/clients`).then((r) => r.json()),
-        fetch(`${API_BASE_URL}/api/permits`).then((r) => r.json()),
-        fetch(`${API_BASE_URL}/api/payments`).then((r) => r.json()),
+        fetch(`${API_BASE_URL}/clients`).then((r) => r.json()),
+        fetch(`${API_BASE_URL}/permits`).then((r) => r.json()),
+        fetch(`${API_BASE_URL}/payments`).then((r) => r.json()),
       ])
 
       const paid = payments.filter((p) => p.is_paid).reduce((sum, p) => sum + p.amount, 0)
