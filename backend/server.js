@@ -10,17 +10,21 @@ const PORT = process.env.PORT || 5001;
 app.use(cors());
 app.use(express.json());
 
+
 // MySQL Connection Pool
-// These variables match the ones we set in your Docker Compose file
-const pool = mysql.createPool({
+const dbConfig = {
   host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
-});
+  queueLimit: 0,
+  charset: "utf8mb4"
+}
+
+const pool = mysql.createPool(dbConfig);
 
 // Initialize database tables
 async function initializeDatabase() {
