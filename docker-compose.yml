@@ -7,9 +7,9 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: parkingapp_data
-      MYSQL_USER: parkingapp_user
-      MYSQL_PASSWORD: strong_app_password
-      MYSQL_ROOT_PASSWORD: strong_root_password
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -33,8 +33,8 @@ services:
       - DB_HOST=database
       - DB_PORT=3306
       - DB_NAME=parkingapp_data
-      - DB_USER=parkingapp_user
-      - DB_PASSWORD=strong_app_password
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
     restart: unless-stopped
 
   frontend:
