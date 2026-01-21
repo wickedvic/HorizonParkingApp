@@ -26,7 +26,9 @@ export default function ClientsPage({ user, onUpdate, initialFilter }) {
   const loadClients = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/clients`)
+      console.log("RES:", res);
       const data = await res.json()
+      console.log("DATA:", data)
       setClients(data)
     } catch (err) { console.error("Failed to load clients:", err) }
   }
