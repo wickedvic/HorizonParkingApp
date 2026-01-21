@@ -92,6 +92,7 @@ async function initializeDatabase() {
     await seedDatabase();
   } catch (err) {
     console.error("Database initialization error:", err);
+    process.exit(1);
   }
 }
 
