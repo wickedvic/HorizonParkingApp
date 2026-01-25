@@ -28,71 +28,71 @@ const pool = mysql.createPool(dbConfig);
 // Initialize database tables
 async function initializeDatabase() {
   try {
-    // Users table
-    await pool.query(`CREATE TABLE IF NOT EXISTS users (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      username VARCHAR(255) UNIQUE NOT NULL,
-      password VARCHAR(255) NOT NULL,
-      role ENUM('admin', 'front_desk', 'read_only') NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`);
+    // // Users table
+    // await pool.query(`CREATE TABLE IF NOT EXISTS users (
+    //   id INT AUTO_INCREMENT PRIMARY KEY,
+    //   username VARCHAR(255) UNIQUE NOT NULL,
+    //   password VARCHAR(255) NOT NULL,
+    //   role ENUM('admin', 'front_desk', 'read_only') NOT NULL,
+    //   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    // )`);
 
-    // Clients table
-    await pool.query(`CREATE TABLE IF NOT EXISTS clients (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      first_name VARCHAR(255) NOT NULL,
-      last_name VARCHAR(255) NOT NULL,
-      email VARCHAR(255) UNIQUE NOT NULL,
-      phone VARCHAR(50),
-      client_type ENUM('employee', 'temp') NOT NULL DEFAULT 'temp',
-      active BOOLEAN DEFAULT 1,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    )`);
+    // // Clients table
+    // await pool.query(`CREATE TABLE IF NOT EXISTS clients (
+    //   id INT AUTO_INCREMENT PRIMARY KEY,
+    //   first_name VARCHAR(255) NOT NULL,
+    //   last_name VARCHAR(255) NOT NULL,
+    //   email VARCHAR(255) UNIQUE NOT NULL,
+    //   phone VARCHAR(50),
+    //   client_type ENUM('employee', 'temp') NOT NULL DEFAULT 'temp',
+    //   active BOOLEAN DEFAULT 1,
+    //   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    //   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    // )`);
 
-    // Cars table
-    await pool.query(`CREATE TABLE IF NOT EXISTS cars (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      client_id INT NOT NULL,
-      license_plate VARCHAR(50) UNIQUE NOT NULL,
-      make VARCHAR(100) NOT NULL,
-      model VARCHAR(100) NOT NULL,
-      color VARCHAR(50),
-      year INT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
-    )`);
+    // // Cars table
+    // await pool.query(`CREATE TABLE IF NOT EXISTS cars (
+    //   id INT AUTO_INCREMENT PRIMARY KEY,
+    //   client_id INT NOT NULL,
+    //   license_plate VARCHAR(50) UNIQUE NOT NULL,
+    //   make VARCHAR(100) NOT NULL,
+    //   model VARCHAR(100) NOT NULL,
+    //   color VARCHAR(50),
+    //   year INT,
+    //   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    //   FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+    // )`);
 
-    // Permits table
-    await pool.query(`CREATE TABLE IF NOT EXISTS permits (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      permit_number VARCHAR(100) UNIQUE NOT NULL,
-      car_id INT NOT NULL,
-      permit_type ENUM('daily', 'monthly', 'custom') NOT NULL,
-      start_date DATE NOT NULL,
-      end_date DATE NOT NULL,
-      daily_rate DOUBLE NOT NULL,
-      total_cost DOUBLE NOT NULL,
-      active BOOLEAN DEFAULT 1,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE
-    )`);
+    // // Permits table
+    // await pool.query(`CREATE TABLE IF NOT EXISTS permits (
+    //   id INT AUTO_INCREMENT PRIMARY KEY,
+    //   permit_number VARCHAR(100) UNIQUE NOT NULL,
+    //   car_id INT NOT NULL,
+    //   permit_type ENUM('daily', 'monthly', 'custom') NOT NULL,
+    //   start_date DATE NOT NULL,
+    //   end_date DATE NOT NULL,
+    //   daily_rate DOUBLE NOT NULL,
+    //   total_cost DOUBLE NOT NULL,
+    //   active BOOLEAN DEFAULT 1,
+    //   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    //   FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE
+    // )`);
 
-    // Payments table
-    await pool.query(`CREATE TABLE IF NOT EXISTS payments (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      permit_id INT NOT NULL,
-      client_id INT NOT NULL,
-      amount DOUBLE NOT NULL,
-      is_paid BOOLEAN DEFAULT 0,
-      paid_date TIMESTAMP NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (permit_id) REFERENCES permits(id) ON DELETE CASCADE,
-      FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
-    )`);
+    // // Payments table
+    // await pool.query(`CREATE TABLE IF NOT EXISTS payments (
+    //   id INT AUTO_INCREMENT PRIMARY KEY,
+    //   permit_id INT NOT NULL,
+    //   client_id INT NOT NULL,
+    //   amount DOUBLE NOT NULL,
+    //   is_paid BOOLEAN DEFAULT 0,
+    //   paid_date TIMESTAMP NULL,
+    //   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    //   FOREIGN KEY (permit_id) REFERENCES permits(id) ON DELETE CASCADE,
+    //   FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+    // )`);
 
     console.log("MySQL Tables Initialized Successfully");
-    await seedDatabase();
+    // await seedDatabase();
   } catch (err) {
     console.error("Database initialization error:", err);
     process.exit(1);
