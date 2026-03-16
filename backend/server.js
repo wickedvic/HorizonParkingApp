@@ -108,17 +108,27 @@ app.post("/permits", async (req, res) => {
   }
 });
 
-// --- PAYMENTS (Updated for 'Payments' table) ---
+// --- PAYMENTS (Updated for your specific column names) ---
 app.get("/payments", async (req, res) => {
   try {
-    // We remove the 'ORDER BY' for now to ensure the query doesn't fail on a bad column name
-    const [rows] = await pool.query("SELECT * FROM Payments LIMIT 100");
+    // Note: Use backticks for columns with spaces
+    const [rows] = await pool.query("SELECT ID, Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy FROM Payments LIMIT 100");
     
-    // Ensure we always return an array, even if empty
-    res.json(Array.isArray(rows) ? rows : []);
+    const formatted = rows.map(p => ({
+      id: p.ID,
+      payer: p.Payer,
+      month: p['Payment Month'],
+      // Convert the varchar string "100.00" to a real number
+      amount: parseFloat(p['Payment Amount']) || 0, 
+      created_at: p.AddedTS,
+      added_by: p.AddedBy,
+      is_paid: true // Assuming records in this table represent completed payments
+    }));
+
+    res.json(formatted);
   } catch (err) { 
     console.error("Payments Query Error:", err.message);
-    res.status(500).json({ error: err.message }); 
+    res.status(500).json({ error: "Failed to fetch payments" }); 
   }
 });
 
