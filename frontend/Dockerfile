@@ -3,14 +3,21 @@ FROM node:24-alpine AS builder
 RUN npm install -g pnpm
 WORKDIR /app
 
-# Copy root lockfile and frontend package definition
-COPY pnpm-lock.yaml ./
+# 1. Copy workspace-wide files first
+COPY pnpm-lock.yaml pnpm-workspace.yaml* ./
+COPY package.json ./ 
+
+# 2. Copy the frontend definition
 COPY frontend/package.json ./frontend/
 
+# 3. Install dependencies for the frontend specifically
+# This will now correctly find material-react-table
 RUN pnpm install --filter ./frontend
 
-# Copy frontend source and build
+# 4. Copy frontend source
 COPY frontend/ ./frontend/
+
+# 5. Move into frontend to build
 WORKDIR /app/frontend
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
@@ -18,12 +25,7 @@ RUN pnpm run build
 
 # Stage 2: Serve with Nginx
 FROM nginx:stable-alpine
-
-# Copy built files from stage 1
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
-
-# IMPORTANT: Copy your custom Nginx config to the correct location
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
-
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
