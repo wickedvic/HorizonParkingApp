@@ -11,6 +11,7 @@ RUN pnpm install --filter ./backend
 
 # Copy backend source code
 COPY backend/ ./backend/
+COPY backend/data.sql ./backend/data.sql
 WORKDIR /app/backend
 
 EXPOSE 5001

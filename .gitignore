@@ -6,6 +6,7 @@ node_modules/
 *.db
 *.sqlite
 *.sqlite3
+data.sql
 
 # Environment Variables
 .env
