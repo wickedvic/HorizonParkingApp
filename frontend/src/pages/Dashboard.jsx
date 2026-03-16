@@ -11,29 +11,29 @@ import "./Dashboard.css"
 
 export default function Dashboard({ user, onLogout }) {
   const [currentPage, setCurrentPage] = useState("dashboard")
-  const [stats, setStats] = useState({ cars: 0, permits: 0, payments: 0 })
+  const [stats, setStats] = useState({ clients: 0, cars: 0, permits: 0, payments: 0 })
   const [initialClientFilter, setInitialClientFilter] = useState("")
 
   useEffect(() => {
-    if (currentPage === "dashboard") {
-      loadStats()
-    }
-  }, [currentPage])
+    loadStats()
+  }, [])
 
   const loadStats = async () => {
     try {
-      // Fetching from the updated endpoints that point to 'Cars', 'DailyPermit', and 'Payments'
-      const [carsRes, permitsRes, paymentsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/cars`),
-        fetch(`${API_BASE_URL}/permits`),
-        fetch(`${API_BASE_URL}/payments`),
+      const [clientsRes, carsRes, permitsRes, paymentsRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/clients`), // Points to 'People' table
+        fetch(`${API_BASE_URL}/cars`),    // Points to 'Cars' table
+        fetch(`${API_BASE_URL}/permits`), // Points to 'DailyPermit' table
+        fetch(`${API_BASE_URL}/payments`), // Points to 'Payments' table
       ])
 
+      const clients = await clientsRes.json()
       const cars = await carsRes.json()
       const permits = await permitsRes.json()
       const payments = await paymentsRes.json()
 
       setStats({
+        clients: Array.isArray(clients) ? clients.length : 0,
         cars: Array.isArray(cars) ? cars.length : 0,
         permits: Array.isArray(permits) ? permits.length : 0,
         payments: Array.isArray(payments) ? payments.length : 0,
@@ -58,6 +58,9 @@ export default function Dashboard({ user, onLogout }) {
           <button className={`nav-btn ${currentPage === "dashboard" ? "active" : ""}`} onClick={() => setCurrentPage("dashboard")}>
             📊 Dashboard
           </button>
+          <button className={`nav-btn ${currentPage === "clients" ? "active" : ""}`} onClick={() => setCurrentPage("clients")}>
+            👥 Clients
+          </button>
           <button className={`nav-btn ${currentPage === "cars" ? "active" : ""}`} onClick={() => setCurrentPage("cars")}>
             🚙 Vehicles
           </button>
@@ -66,6 +69,9 @@ export default function Dashboard({ user, onLogout }) {
           </button>
           <button className={`nav-btn ${currentPage === "payments" ? "active" : ""}`} onClick={() => setCurrentPage("payments")}>
             💰 Billing
+          </button>
+          <button className={`nav-btn ${currentPage === "reports" ? "active" : ""}`} onClick={() => setCurrentPage("reports")}>
+            📈 Reports
           </button>
         </nav>
         <div className="sidebar-footer">
@@ -79,17 +85,21 @@ export default function Dashboard({ user, onLogout }) {
       <main className="dashboard-main">
         {currentPage === "dashboard" && (
           <div className="animate-fade-in">
-            <h2 className="page-title">System Overview</h2>
+            <h2 className="page-title">Dashboard Overview</h2>
             <div className="stats-grid">
               <div className="stat-card info">
+                <h3>Total Clients</h3>
+                <p className="stat-number">{stats.clients}</p>
+              </div>
+              <div className="stat-card warning">
                 <h3>Total Vehicles</h3>
                 <p className="stat-number">{stats.cars}</p>
               </div>
-              <div className="stat-card warning">
+              <div className="stat-card success">
                 <h3>Permit Records</h3>
                 <p className="stat-number">{stats.permits}</p>
               </div>
-              <div className="stat-card success">
+              <div className="stat-card primary">
                 <h3>Payment Records</h3>
                 <p className="stat-number">{stats.payments}</p>
               </div>
@@ -97,24 +107,28 @@ export default function Dashboard({ user, onLogout }) {
 
             <h3 style={{marginBottom: '20px', color: '#2c3e50', borderBottom: '1px solid #eee', paddingBottom: '10px'}}>Quick Actions</h3>
             <div className="dashboard-actions">
-                <button className="action-btn" onClick={() => setCurrentPage("permits")}>
-                    <span style={{fontSize: '24px', marginRight: '10px'}}>🎫</span> View Permits
+                <button className="action-btn" onClick={() => setCurrentPage("clients")}>
+                    <span style={{fontSize: '24px', marginRight: '10px'}}>👥</span> Manage People
                 </button>
-                <button className="action-btn" onClick={() => setCurrentPage("cars")}>
-                    <span style={{fontSize: '24px', marginRight: '10px'}}>🚙</span> View Vehicles
+                <button className="action-btn" onClick={() => setCurrentPage("permits")}>
+                    <span style={{fontSize: '24px', marginRight: '10px'}}>🎫</span> Issue Permit
                 </button>
                 <button className="action-btn" onClick={() => setCurrentPage("payments")}>
-                    <span style={{fontSize: '24px', marginRight: '10px'}}>💰</span> Check Billing
+                    <span style={{fontSize: '24px', marginRight: '10px'}}>💰</span> Billing History
                 </button>
             </div>
           </div>
         )}
         
+        {currentPage === "clients" && (
+          <ClientsPage user={user} onUpdate={loadStats} initialFilter={initialClientFilter} />
+        )}
         {currentPage === "cars" && (
           <CarsPage user={user} onNavigateClient={handleNavigateToClients} />
         )}
         {currentPage === "permits" && <PermitsPage user={user} />}
         {currentPage === "payments" && <PaymentsPage user={user} onUpdate={loadStats} />}
+        {currentPage === "reports" && <ReportsPage user={user} />}
       </main>
     </div>
   )
