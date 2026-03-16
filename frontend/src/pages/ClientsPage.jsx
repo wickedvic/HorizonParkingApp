@@ -6,18 +6,22 @@ import {
   Box,
   Typography,
   Chip,
-  Link, // Added for the clickable permit
+  Link,
   List,
   ListItem,
   ListItemText,
-  Divider
+  Divider,
+  ToggleButton,
+  ToggleButtonGroup,
+  Stack
 } from "@mui/material";
 import { DirectionsCar as CarIcon } from "@mui/icons-material";
 import { MaterialReactTable } from 'material-react-table';
 
-export default function ClientsPage({ user, onNavigatePermit }) { // Added navigation prop
+export default function ClientsPage({ user, onNavigatePermit }) {
   const [clients, setClients] = useState([]);
   const [allCars, setAllCars] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("active");
 
   useEffect(() => {
     loadClients();
@@ -28,7 +32,13 @@ export default function ClientsPage({ user, onNavigatePermit }) { // Added navig
     try {
       const res = await fetch(`${API_BASE_URL}/clients`);
       const data = await res.json();
-      setClients(Array.isArray(data) ? data : []);
+      
+      // MASSAGE DATA: Remove completely empty rows or rows without a name/ID
+      const cleanData = Array.isArray(data) ? data.filter(row => 
+        row.id && (row.firstName || row.lastName)
+      ) : [];
+      
+      setClients(cleanData);
     } catch (err) {
       console.error("Failed to load clients:", err);
     }
@@ -43,6 +53,11 @@ export default function ClientsPage({ user, onNavigatePermit }) { // Added navig
       console.error("Failed to load cars:", err);
     }
   };
+
+  // Filter clients based on the Toggle Button
+  const displayedClients = useMemo(() => {
+    return clients.filter(c => c.status?.toLowerCase() === statusFilter.toLowerCase());
+  }, [clients, statusFilter]);
 
   const columns = useMemo(
     () => [
@@ -65,23 +80,30 @@ export default function ClientsPage({ user, onNavigatePermit }) { // Added navig
         ),
       },
       {
-        // NEW: Permit Number Column
-        accessorKey: "permitNumber", // Maps to 'Permit #' from your SQL
-        header: "Permit #",
+        accessorKey: "permitNumber",
+        header: "Permits",
         Cell: ({ cell }) => {
           const val = cell.getValue();
-          if (!val) return <Typography variant="body2" color="text.disabled">None</Typography>;
+          if (!val) return <Typography variant="caption" color="text.disabled">None</Typography>;
+          
+          // Split by comma in case there are multiple permits (e.g., "101, 102")
+          const permitList = val.toString().split(',').map(p => p.trim());
           
           return (
-            <Link
-              component="button"
-              variant="body2"
-              underline="hover"
-              onClick={() => onNavigatePermit(val)} // Assuming your App.jsx handles routing
-              sx={{ fontWeight: 'bold', color: 'primary.main', textAlign: 'left' }}
-            >
-              {val}
-            </Link>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+              {permitList.map((permit, index) => (
+                <Link
+                  key={index}
+                  component="button"
+                  variant="body2"
+                  onClick={() => onNavigatePermit(permit)}
+                  sx={{ fontWeight: 'bold', fontSize: '0.85rem' }}
+                >
+                  #{permit}
+                  {index < permitList.length - 1 && ","}
+                </Link>
+              ))}
+            </Box>
           );
         },
       },
@@ -90,29 +112,15 @@ export default function ClientsPage({ user, onNavigatePermit }) { // Added navig
         header: "Email",
       },
       {
-        accessorKey: "type",
-        header: "Type",
-        Cell: ({ cell }) => (
-          <Chip 
-            label={cell.getValue() || 'Standard'} 
-            size="small" 
-            variant="outlined"
-          />
-        ),
-      },
-      {
         accessorKey: "status",
         header: "Status",
-        Cell: ({ cell }) => {
-          const status = cell.getValue()?.toLowerCase();
-          return (
-            <Chip 
-              label={cell.getValue() || 'Unknown'} 
-              size="small" 
-              color={status === 'active' ? 'success' : 'error'}
-            />
-          );
-        },
+        Cell: ({ cell }) => (
+          <Chip 
+            label={cell.getValue() || 'Unknown'} 
+            size="small" 
+            color={cell.getValue()?.toLowerCase() === 'active' ? 'success' : 'error'}
+          />
+        ),
       },
     ],
     [onNavigatePermit]
@@ -120,13 +128,26 @@ export default function ClientsPage({ user, onNavigatePermit }) { // Added navig
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
-        Client Directory
-      </Typography>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+          Client Directory
+        </Typography>
+
+        <ToggleButtonGroup
+          color="primary"
+          value={statusFilter}
+          exclusive
+          onChange={(e, val) => val && setStatusFilter(val)}
+          size="small"
+        >
+          <ToggleButton value="active">Active</ToggleButton>
+          <ToggleButton value="inactive">Inactive</ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
 
       <MaterialReactTable
         columns={columns}
-        data={clients}
+        data={displayedClients}
         enableColumnOrdering
         renderDetailPanel={({ row }) => {
           const clientVehicles = allCars.filter(car => car.owner_id == row.original.id);

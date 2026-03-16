@@ -124,17 +124,17 @@ app.post("/permits", async (req, res) => {
 app.get("/payments", async (req, res) => {
   try {
     // Note: Use backticks for columns with spaces
-    const [rows] = await pool.query("SELECT ID, Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy FROM Payments LIMIT 100");
+    const [rows] = await pool.query("SELECT ID, Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy FROM Payments LIMIT 1000");
     
     const formatted = rows.map(p => ({
       id: p.ID,
       payer: p.Payer,
       month: p['Payment Month'],
-      // Convert the varchar string "100.00" to a real number
+      // Convert the varchar string "100.00" to a real number for the frontend
       amount: parseFloat(p['Payment Amount']) || 0, 
       created_at: p.AddedTS,
       added_by: p.AddedBy,
-      is_paid: true // Assuming records in this table represent completed payments
+      is_paid: true 
     }));
 
     res.json(formatted);

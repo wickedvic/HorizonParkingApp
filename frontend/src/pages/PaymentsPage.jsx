@@ -1,75 +1,157 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
-import "./PaymentsPage.css"
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Grid,
+  Stack,
+  Chip
+} from "@mui/material";
+import { 
+  Paid as PaidIcon, 
+  CalendarMonth as MonthIcon, 
+  Person as PersonIcon 
+} from "@mui/icons-material";
+import { MaterialReactTable } from 'material-react-table';
 
 export default function PaymentsPage({ user }) {
-  const [payments, setPayments] = useState([])
+  const [payments, setPayments] = useState([]);
 
   useEffect(() => {
-    loadPayments()
-  }, [])
+    loadPayments();
+  }, []);
 
   const loadPayments = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/payments`)
-      const data = await res.json()
-      if (Array.isArray(data)) {
-        setPayments(data)
-      } else {
-        setPayments([])
-      }
+      const res = await fetch(`${API_BASE_URL}/payments`);
+      const data = await res.json();
+      setPayments(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error("Failed to load payments:", err)
-      setPayments([])
+      console.error("Failed to load payments:", err);
+      setPayments([]);
     }
-  }
+  };
 
-  const safePayments = Array.isArray(payments) ? payments : []
-  const totalReceived = safePayments.reduce((sum, p) => sum + (p.amount || 0), 0)
+  // Uses the 'amount' key from your formatted backend response
+  const totalRevenue = useMemo(() => {
+    return payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  }, [payments]);
+
+  const columns = useMemo(
+    () => [
+      {
+        accessorKey: "created_at",
+        header: "Date Recorded",
+        size: 180,
+      },
+      {
+        accessorKey: "payer",
+        header: "Payer ID",
+        size: 100,
+        Cell: ({ cell }) => (
+          <Typography sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+            {cell.getValue()}
+          </Typography>
+        ),
+      },
+      {
+        accessorKey: "month",
+        header: "Billing Period",
+        Cell: ({ cell }) => (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <MonthIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+            <Typography>{cell.getValue()}</Typography>
+          </Stack>
+        ),
+      },
+      {
+        accessorKey: "amount",
+        header: "Amount",
+        Cell: ({ cell }) => (
+          <Typography sx={{ fontWeight: 600, color: 'success.main' }}>
+            ${(cell.getValue() || 0).toFixed(2)}
+          </Typography>
+        ),
+      },
+      {
+        accessorKey: "added_by",
+        header: "Processed By",
+        size: 120,
+        Cell: ({ cell }) => (
+          <Chip 
+            label={cell.getValue() || 'System'} 
+            size="small" 
+            variant="outlined" 
+            icon={<PersonIcon sx={{ fontSize: '14px !important' }} />} 
+          />
+        ),
+      },
+    ],
+    []
+  );
 
   return (
-    <div className="payments-page">
-      <div className="page-header">
-        <h2>Billing & Payments</h2>
-      </div>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
+        Billing & Payments
+      </Typography>
 
-      <div className="payment-summary">
-        <div className="summary-card success">
-          <h3>Total Revenue</h3>
-          <p className="amount">${totalReceived.toFixed(2)}</p>
-        </div>
-      </div>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={4}>
+          <Card sx={{ borderRadius: '12px', border: '1px solid #e0e0e0', bgcolor: '#f8fff9' }}>
+            <CardContent>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Box sx={{ bgcolor: 'success.main', p: 1, borderRadius: '8px', display: 'flex' }}>
+                  <PaidIcon sx={{ color: 'white' }} />
+                </Box>
+                <Box>
+                  <Typography color="text.secondary" variant="overline">Total Revenue</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'success.dark' }}>
+                    ${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </Typography>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} sm={6} md={4}>
+          <Card sx={{ borderRadius: '12px', border: '1px solid #e0e0e0' }}>
+            <CardContent>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Box sx={{ bgcolor: 'primary.main', p: 1, borderRadius: '8px', display: 'flex' }}>
+                  <MonthIcon sx={{ color: 'white' }} />
+                </Box>
+                <Box>
+                  <Typography color="text.secondary" variant="overline">Transactions</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                    {payments.length}
+                  </Typography>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
-      <div className="payments-list">
-        {safePayments.length === 0 ? (
-          <p className="empty-message">No payment records found</p>
-        ) : (
-          <table className="payments-table">
-            <thead>
-              <tr>
-                <th>Date Added</th>
-                <th>Payer ID</th>
-                <th>For Month</th>
-                <th>Amount</th>
-                <th>Added By</th>
-              </tr>
-            </thead>
-            <tbody>
-              {safePayments.map((p, index) => (
-                <tr key={p.id || index}>
-                  <td>{p.created_at || "N/A"}</td>
-                  <td><strong>{p.payer}</strong></td>
-                  <td>{p.month}</td>
-                  <td>${(p.amount || 0).toFixed(2)}</td>
-                  <td>{p.added_by}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
-  )
+      <MaterialReactTable
+        columns={columns}
+        data={payments}
+        enableColumnOrdering
+        enableGlobalFilter
+        initialState={{ 
+          density: 'compact',
+          sorting: [{ id: 'created_at', desc: true }] 
+        }}
+        muiTablePaperProps={{
+          elevation: 2,
+          sx: { borderRadius: '12px' }
+        }}
+      />
+    </Box>
+  );
 }
