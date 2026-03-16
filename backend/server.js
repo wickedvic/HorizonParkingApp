@@ -24,7 +24,7 @@ const dbConfig = {
 }
 
 const pool = mysql.createPool(dbConfig);
-
+console.log("TEST", dbConfig)
 // Initialize database tables
 async function initializeDatabase() {
   try {
