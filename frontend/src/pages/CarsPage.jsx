@@ -2,17 +2,15 @@
 
 import { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
-import "./CarsPage.css"
 import {
   Box,
-  Button,
   Tooltip,
   IconButton,
 } from "@mui/material";
 import { Delete as DeleteIcon } from "@mui/icons-material";
 import MaterialReactTable from "material-react-table";
 
-export default function CarsPage({ user, onNavigateClient }) {
+export default function CarsPage({ user }) {
   const [cars, setCars] = useState([])
 
   useEffect(() => {
@@ -40,20 +38,12 @@ export default function CarsPage({ user, onNavigateClient }) {
     }
   }
 
-  // Define Columns for MaterialReactTable
   const columns = useMemo(
     () => [
       {
         accessorKey: "license_plate",
         header: "License Plate",
-        Cell: ({ cell, row }) => (
-          <Box>
-            <strong>{cell.getValue()?.split('\r')[0]}</strong>
-            {row.original.has_active_permit === 1 && (
-              <Box sx={{ fontSize: '10px', color: '#155724', mt: 0.5 }}>Active</Box>
-            )}
-          </Box>
-        ),
+        Cell: ({ cell }) => <strong>{cell.getValue()?.split('\r')[0]}</strong>,
       },
       { accessorKey: "make", header: "Make" },
       { accessorKey: "model", header: "Model" },
@@ -62,24 +52,16 @@ export default function CarsPage({ user, onNavigateClient }) {
       {
         accessorKey: "owner_id",
         header: "Owner ID",
-        Cell: ({ cell }) => (
-          <Box sx={{ fontWeight: '600', color: '#667eea' }}>
-            {cell.getValue() || "Unknown"}
-          </Box>
-        ),
+        Cell: ({ cell }) => <Box sx={{ fontWeight: '600', color: '#667eea' }}>{cell.getValue() || "Unknown"}</Box>,
       },
       {
         accessorKey: "actions",
         header: "Actions",
-        enableColumnOrdering: false,
         enableSorting: false,
         Cell: ({ row }) => (
-          user.role === "admin" && (
+          user?.role === "admin" && (
             <Tooltip title="Delete">
-              <IconButton 
-                color="error" 
-                onClick={() => handleDeleteCar(row.original.id, row.original.license_plate)}
-              >
+              <IconButton color="error" onClick={() => handleDeleteCar(row.original.id, row.original.license_plate)}>
                 <DeleteIcon />
               </IconButton>
             </Tooltip>
@@ -87,35 +69,19 @@ export default function CarsPage({ user, onNavigateClient }) {
         ),
       },
     ],
-    [user.role]
+    [user?.role]
   );
 
   return (
-    <div className="cars-page">
-      <div className="page-header">
-        <h2>All Vehicles</h2>
-      </div>
-
-      <Box sx={{ mt: 2 }}>
-        <MaterialReactTable
-          columns={columns}
-          data={cars}
-          enableColumnOrdering
-          enablePinning
-          enableStickyHeader
-          initialState={{ 
-            density: 'compact',
-            columnPinning: { right: ["actions"] } 
-          }}
-          muiTablePaperProps={{
-            elevation: 0,
-            sx: { borderRadius: '8px', border: '1px solid #e0e0e0' }
-          }}
-          muiTableHeadCellProps={{
-            sx: { backgroundColor: '#f5f5f5', fontWeight: 'bold' }
-          }}
-        />
-      </Box>
-    </div>
+    <Box sx={{ p: 2 }}>
+      <h2>All Vehicles</h2>
+      <MaterialReactTable
+        columns={columns}
+        data={cars}
+        enableColumnOrdering
+        enablePinning
+        initialState={{ density: 'compact' }}
+      />
+    </Box>
   )
 }
