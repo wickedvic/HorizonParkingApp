@@ -1,28 +1,125 @@
 "use client"
-import React, { useMemo, useState, useEffect } from "react"
+
+import React, { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
+import {
+  Box,
+  Tooltip,
+  IconButton,
+  Typography,
+  Chip
+} from "@mui/material";
+import { Delete as DeleteIcon } from "@mui/icons-material";
 import { MaterialReactTable } from 'material-react-table';
 
-export default function CarsPage() {
+export default function CarsPage({ user }) {
   const [cars, setCars] = useState([]);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/cars`)
-      .then((res) => res.json())
-      .then((data) => setCars(Array.isArray(data) ? data : []))
-      .catch((err) => console.error("Fetch error:", err));
+    loadCars();
   }, []);
 
-  const columns = useMemo(() => [
-    { accessorKey: "license_plate", header: "License Plate" },
-    { accessorKey: "make", header: "Make" },
-    { accessorKey: "model", header: "Model" },
-  ], []);
+  const loadCars = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/cars`);
+      const data = await res.json();
+      setCars(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to load cars:", err);
+    }
+  };
+
+  const handleDeleteCar = async (id, plate) => {
+    if (window.confirm(`Are you sure you want to delete vehicle ${plate}?`)) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/cars/${id}`, { method: 'DELETE' });
+        if (res.ok) loadCars();
+      } catch (err) {
+        console.error("Error deleting car:", err);
+      }
+    }
+  };
+
+  const columns = useMemo(
+    () => [
+      {
+        accessorKey: "license_plate",
+        header: "License Plate",
+        Cell: ({ cell, row }) => (
+          <Box>
+            <Typography sx={{ fontWeight: 'bold' }}>
+              {cell.getValue()?.split('\r')[0]}
+            </Typography>
+            {row.original.has_active_permit === 1 && (
+              <Chip 
+                label="Active" 
+                size="small" 
+                color="success" 
+                variant="outlined" 
+                sx={{ height: '18px', fontSize: '10px', mt: 0.5 }} 
+              />
+            )}
+          </Box>
+        ),
+      },
+      { accessorKey: "make", header: "Make" },
+      { accessorKey: "model", header: "Model" },
+      { accessorKey: "year", header: "Year" },
+      { accessorKey: "color", header: "Color" },
+      {
+        accessorKey: "owner_id",
+        header: "Owner ID",
+        Cell: ({ cell }) => (
+          <Typography sx={{ fontWeight: 600, color: 'primary.main' }}>
+            {cell.getValue() || "Unknown"}
+          </Typography>
+        ),
+      },
+      {
+        accessorKey: "actions",
+        header: "Actions",
+        enableSorting: false,
+        enableColumnFilter: false,
+        Cell: ({ row }) => (
+          user?.role === "admin" && (
+            <Tooltip title="Delete Vehicle">
+              <IconButton 
+                color="error" 
+                onClick={() => handleDeleteCar(row.original.id, row.original.license_plate)}
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
+          )
+        ),
+      },
+    ],
+    [user?.role]
+  );
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h2>All Vehicles</h2>
-      <MaterialReactTable columns={columns} data={cars} />
-    </div>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold', color: '#2c3e50' }}>
+        Vehicle Inventory
+      </Typography>
+      
+      <MaterialReactTable
+        columns={columns}
+        data={cars}
+        enableColumnOrdering
+        enableStickyHeader
+        initialState={{ 
+          density: 'compact',
+          columnPinning: { right: ["actions"] } 
+        }}
+        muiTablePaperProps={{
+          elevation: 2,
+          sx: { borderRadius: '12px', border: '1px solid #e0e0e0' }
+        }}
+        muiTableHeadCellProps={{
+          sx: { backgroundColor: '#f8f9fa', color: '#333', fontWeight: 'bold' }
+        }}
+      />
+    </Box>
   );
 }
