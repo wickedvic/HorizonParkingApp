@@ -38,12 +38,23 @@ app.post("/auth/login", async (req, res) => {
   }
 });
 
-// --- CLIENTS (Pointed to 'People' table) ---
 app.get("/clients", async (req, res) => {
   try {
-    // Selects from the 'People' table found in your SQL dump
     const [rows] = await pool.query("SELECT * FROM People");
-    res.json(rows);
+    
+    // Mapping SQL names (First, Last, PeopleID) to keys used in JSX
+    const formattedPeople = rows.map(person => ({
+      id: person.PeopleID,
+      firstName: person.First,
+      lastName: person.Last,
+      email: person.EmailAddr,
+      phone: person['Cell Phone'] || person['Home Phone'] || "N/A",
+      type: person['Client Type'],
+      company: person.Company,
+      status: person.Status
+    }));
+
+    res.json(formattedPeople);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -25,19 +25,18 @@ export default function ClientsPage({ user, onUpdate, initialFilter }) {
 
   const loadCarsForClient = async (clientId) => {
     try {
-      // Points to the updated backend route for the 'Cars' table
       const res = await fetch(`${API_BASE_URL}/cars`)
       const allCars = await res.json()
-      // Filtering cars where Owner matches the People ID
+      // Matches your car owner_id to the PeopleID
       const filtered = allCars.filter(car => car.owner_id == clientId)
       setClientCars(filtered)
     } catch (err) { console.error("Failed to load cars:", err) }
   }
 
-  const filteredClients = clients.filter((client) => {
-    const fullName = `${client.FName} ${client.LName}`.toLowerCase()
+  const filteredClients = Array.isArray(clients) ? clients.filter((client) => {
+    const fullName = `${client.firstName} ${client.lastName}`.toLowerCase()
     return fullName.includes(filterName.toLowerCase())
-  })
+  }) : []
 
   return (
     <div className="clients-page">
@@ -60,17 +59,23 @@ export default function ClientsPage({ user, onUpdate, initialFilter }) {
           <p className="empty-message">No clients found</p>
         ) : (
           filteredClients.map((person) => (
-            <div key={person['People ID#']} className="client-card">
+            <div key={person.id} className="client-card">
               <div className="client-info">
-                <h3>{person.FName} {person.LName}</h3>
-                <p className="contact">ID: {person['People ID#']} | Type: {person.Type}</p>
+                <h3>{person.firstName} {person.lastName}</h3>
+                <p className="contact">
+                    <strong>ID:</strong> {person.id} | 
+                    <strong> Type:</strong> {person.type || 'N/A'}
+                </p>
+                <p className="contact" style={{fontSize: '0.9em', color: '#666'}}>
+                    {person.email} | {person.phone}
+                </p>
               </div>
               <div style={{display: 'flex', gap: '8px'}}>
                 <button 
                   className="btn-secondary" 
                   onClick={() => { 
                     setSelectedClient(person); 
-                    loadCarsForClient(person['People ID#']) 
+                    loadCarsForClient(person.id) 
                   }}
                 >
                   View Vehicles
@@ -85,7 +90,7 @@ export default function ClientsPage({ user, onUpdate, initialFilter }) {
         <div className="modal-overlay" onClick={() => setSelectedClient(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Vehicles for {selectedClient.FName}</h2>
+              <h2>Vehicles for {selectedClient.firstName}</h2>
               <button className="btn-close" onClick={() => setSelectedClient(null)}>×</button>
             </div>
             <div className="cars-list">
@@ -95,7 +100,7 @@ export default function ClientsPage({ user, onUpdate, initialFilter }) {
                 clientCars.map((car) => (
                   <div key={car.id} className="car-item">
                     <h4>{car.make} {car.model}</h4>
-                    <p>License: <strong>{car.license_plate}</strong></p>
+                    <p>License: <strong>{car.license_plate?.split('\r')[0]}</strong></p>
                   </div>
                 ))
               )}
