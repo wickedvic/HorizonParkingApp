@@ -12,13 +12,14 @@ import {
   Tabs,
   Tab,
   Divider,
-  Button
+  Button,
+  Paper
 } from "@mui/material";
 import { 
   BarChart as ChartIcon, 
   DirectionsCar as CarIcon, 
   People as PeopleIcon, 
-  LocalLabel as PermitIcon,
+  ConfirmationNumber as PermitIcon,
   Payments as MoneyIcon,
   Download as DownloadIcon
 } from "@mui/icons-material";
@@ -79,7 +80,7 @@ export default function ReportsPage({ user }) {
         { accessorKey: "created_at", header: "Date" },
         { accessorKey: "payer", header: "Payer ID" },
         { accessorKey: "month", header: "Month" },
-        { accessorKey: "amount", header: "Amount", Cell: ({ cell }) => `$${cell.getValue().toFixed(2)}` },
+        { accessorKey: "amount", header: "Amount", Cell: ({ cell }) => `$${(cell.getValue() || 0).toFixed(2)}` },
       ];
     } else { // Vehicles Report
       return [
