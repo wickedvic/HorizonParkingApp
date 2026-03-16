@@ -11,29 +11,32 @@ import "./Dashboard.css"
 
 export default function Dashboard({ user, onLogout }) {
   const [currentPage, setCurrentPage] = useState("dashboard")
-  const [stats, setStats] = useState({ clients: 0, permits: 0, paid: 0, pending: 0 })
+  const [stats, setStats] = useState({ cars: 0, permits: 0, payments: 0 })
   const [initialClientFilter, setInitialClientFilter] = useState("")
 
   useEffect(() => {
-    loadStats()
-  }, [])
+    if (currentPage === "dashboard") {
+      loadStats()
+    }
+  }, [currentPage])
 
   const loadStats = async () => {
     try {
-      const [clients, permits, payments] = await Promise.all([
-        fetch(`${API_BASE_URL}/clients`).then((r) => r.json()),
-        fetch(`${API_BASE_URL}/permits`).then((r) => r.json()),
-        fetch(`${API_BASE_URL}/payments`).then((r) => r.json()),
+      // Fetching from the updated endpoints that point to 'Cars', 'DailyPermit', and 'Payments'
+      const [carsRes, permitsRes, paymentsRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/cars`),
+        fetch(`${API_BASE_URL}/permits`),
+        fetch(`${API_BASE_URL}/payments`),
       ])
 
-      const paid = payments.filter((p) => p.is_paid).reduce((sum, p) => sum + p.amount, 0)
-      const pending = payments.filter((p) => !p.is_paid).reduce((sum, p) => sum + p.amount, 0)
+      const cars = await carsRes.json()
+      const permits = await permitsRes.json()
+      const payments = await paymentsRes.json()
 
       setStats({
-        clients: clients.length,
-        permits: permits.length,
-        paid,
-        pending,
+        cars: Array.isArray(cars) ? cars.length : 0,
+        permits: Array.isArray(permits) ? permits.length : 0,
+        payments: Array.isArray(payments) ? payments.length : 0,
       })
     } catch (err) {
       console.error("Failed to load stats:", err)
@@ -55,9 +58,6 @@ export default function Dashboard({ user, onLogout }) {
           <button className={`nav-btn ${currentPage === "dashboard" ? "active" : ""}`} onClick={() => setCurrentPage("dashboard")}>
             📊 Dashboard
           </button>
-          <button className={`nav-btn ${currentPage === "clients" ? "active" : ""}`} onClick={() => setCurrentPage("clients")}>
-            👥 Clients
-          </button>
           <button className={`nav-btn ${currentPage === "cars" ? "active" : ""}`} onClick={() => setCurrentPage("cars")}>
             🚙 Vehicles
           </button>
@@ -66,9 +66,6 @@ export default function Dashboard({ user, onLogout }) {
           </button>
           <button className={`nav-btn ${currentPage === "payments" ? "active" : ""}`} onClick={() => setCurrentPage("payments")}>
             💰 Billing
-          </button>
-          <button className={`nav-btn ${currentPage === "reports" ? "active" : ""}`} onClick={() => setCurrentPage("reports")}>
-            📈 Reports
           </button>
         </nav>
         <div className="sidebar-footer">
@@ -82,50 +79,42 @@ export default function Dashboard({ user, onLogout }) {
       <main className="dashboard-main">
         {currentPage === "dashboard" && (
           <div className="animate-fade-in">
-            <h2 className="page-title">Dashboard Overview</h2>
+            <h2 className="page-title">System Overview</h2>
             <div className="stats-grid">
               <div className="stat-card info">
-                <h3>Total Clients</h3>
-                <p className="stat-number">{stats.clients}</p>
+                <h3>Total Vehicles</h3>
+                <p className="stat-number">{stats.cars}</p>
               </div>
               <div className="stat-card warning">
-                <h3>Active Permits</h3>
+                <h3>Permit Records</h3>
                 <p className="stat-number">{stats.permits}</p>
               </div>
               <div className="stat-card success">
-                <h3>Revenue (Paid)</h3>
-                <p className="stat-number" style={{color: '#27ae60'}}>${stats.paid.toFixed(2)}</p>
-              </div>
-              <div className="stat-card primary">
-                <h3>Pending Invoices</h3>
-                <p className="stat-number" style={{color: '#e67e22'}}>${stats.pending.toFixed(2)}</p>
+                <h3>Payment Records</h3>
+                <p className="stat-number">{stats.payments}</p>
               </div>
             </div>
 
             <h3 style={{marginBottom: '20px', color: '#2c3e50', borderBottom: '1px solid #eee', paddingBottom: '10px'}}>Quick Actions</h3>
             <div className="dashboard-actions">
                 <button className="action-btn" onClick={() => setCurrentPage("permits")}>
-                    <span style={{fontSize: '24px', marginRight: '10px'}}>🎫</span> Issue New Permit
+                    <span style={{fontSize: '24px', marginRight: '10px'}}>🎫</span> View Permits
                 </button>
-                <button className="action-btn" onClick={() => setCurrentPage("clients")}>
-                    <span style={{fontSize: '24px', marginRight: '10px'}}>👥</span> Register Client
+                <button className="action-btn" onClick={() => setCurrentPage("cars")}>
+                    <span style={{fontSize: '24px', marginRight: '10px'}}>🚙</span> View Vehicles
                 </button>
                 <button className="action-btn" onClick={() => setCurrentPage("payments")}>
-                    <span style={{fontSize: '24px', marginRight: '10px'}}>💰</span> View Pending
+                    <span style={{fontSize: '24px', marginRight: '10px'}}>💰</span> Check Billing
                 </button>
             </div>
           </div>
         )}
         
-        {currentPage === "clients" && (
-          <ClientsPage user={user} onUpdate={loadStats} initialFilter={initialClientFilter} />
-        )}
         {currentPage === "cars" && (
           <CarsPage user={user} onNavigateClient={handleNavigateToClients} />
         )}
         {currentPage === "permits" && <PermitsPage user={user} />}
         {currentPage === "payments" && <PaymentsPage user={user} onUpdate={loadStats} />}
-        {currentPage === "reports" && <ReportsPage user={user} />}
       </main>
     </div>
   )

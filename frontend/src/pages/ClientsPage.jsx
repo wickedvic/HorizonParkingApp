@@ -26,9 +26,7 @@ export default function ClientsPage({ user, onUpdate, initialFilter }) {
   const loadClients = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/clients`)
-      console.log("RES:", res);
       const data = await res.json()
-      console.log("DATA:", data)
       setClients(data)
     } catch (err) { console.error("Failed to load clients:", err) }
   }
@@ -41,28 +39,25 @@ export default function ClientsPage({ user, onUpdate, initialFilter }) {
     } catch (err) { console.error("Failed to load cars:", err) }
   }
 
-  const handleToggleActive = async (client) => {
-      const newStatus = client.active === 1 ? false : true;
-      const action = newStatus ? "activate" : "deactivate";
-      if (confirm(`Are you sure you want to ${action} ${client.first_name}?`)) {
-          try {
-              const res = await fetch(`${API_BASE_URL}/clients/${client.id}/toggle-active`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ active: newStatus })
-              });
-              if (res.ok) loadClients();
-          } catch(err) { console.error(err); }
+  const handleAddCar = async (e) => {
+    e.preventDefault()
+    if (!selectedClient) return
+    try {
+      const res = await fetch(`${API_BASE_URL}/cars`, { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ 
+            owner_id: selectedClient.id, 
+            ...carForm,
+            state: "NY" 
+        }) 
+      })
+      if (res.ok) { 
+        loadCars(selectedClient.id); 
+        setCarForm({ license_plate: "", make: "", model: "", color: "", year: new Date().getFullYear() }); 
+        setShowCarForm(false); 
       }
-  }
-
-  const handleDeleteClient = async (id, name) => {
-      if (window.confirm(`Delete ${name}? This will remove all their vehicles and history.`)) {
-          try {
-              const res = await fetch(`${API_BASE_URL}/clients/${id}`, { method: 'DELETE' });
-              if (res.ok) { loadClients(); onUpdate(); }
-          } catch (err) { console.error("Error deleting client:", err); }
-      }
+    } catch (err) { console.error("Failed to add car:", err) }
   }
 
   const handleSubmitClient = async (e) => {
@@ -78,18 +73,10 @@ export default function ClientsPage({ user, onUpdate, initialFilter }) {
   const resetForm = () => { setFormData({ first_name: "", last_name: "", email: "", phone: "", client_type: "temp" }); setEditingId(null); }
   const handleEditClick = (client) => { setFormData({ first_name: client.first_name, last_name: client.last_name, email: client.email, phone: client.phone, client_type: client.client_type || "temp" }); setEditingId(client.id); setShowForm(true); }
   const handleAddClick = () => { resetForm(); setShowForm(!showForm); }
-  const handleAddCar = async (e) => {
-    e.preventDefault()
-    if (!selectedClient) return
-    try {
-      const res = await fetch(`${API_BASE_URL}/cars`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ client_id: selectedClient.id, ...carForm }) })
-      if (res.ok) { loadCars(selectedClient.id); setCarForm({ license_plate: "", make: "", model: "", color: "", year: new Date().getFullYear() }); setShowCarForm(false); }
-    } catch (err) { console.error("Failed to add car:", err) }
-  }
 
   const filteredClients = clients.filter((client) => {
     const fullName = `${client.first_name} ${client.last_name}`.toLowerCase()
-    return fullName.includes(filterName.toLowerCase()) || (client.email && client.email.toLowerCase().includes(filterName.toLowerCase()))
+    return fullName.includes(filterName.toLowerCase())
   })
 
   return (
@@ -99,7 +86,7 @@ export default function ClientsPage({ user, onUpdate, initialFilter }) {
         {(user.role === "admin" || user.role === "front_desk") && <button className="btn-primary" onClick={handleAddClick}>{showForm && !editingId ? "Cancel" : "Add New Client"}</button>}
       </div>
       <div className="filter-section">
-        <input type="text" placeholder="Search by name or email..." value={filterName} onChange={(e) => setFilterName(e.target.value)} className="filter-input" />
+        <input type="text" placeholder="Search by name..." value={filterName} onChange={(e) => setFilterName(e.target.value)} className="filter-input" />
       </div>
       {showForm && (
         <div className="form-card">
@@ -114,30 +101,18 @@ export default function ClientsPage({ user, onUpdate, initialFilter }) {
                 <option value="employee">Employee</option>
             </select>
             <button type="submit" className="btn-primary">{editingId ? "Save Changes" : "Register Client"} </button>
-            {editingId && <button type="button" className="btn-secondary" onClick={() => { setShowForm(false); resetForm(); }}>Cancel</button>}
           </form>
         </div>
       )}
       <div className="clients-list">
-        {filteredClients.length === 0 ? <p className="empty-message">No clients found</p> : filteredClients.map((client) => (
-            <div key={client.id} className={`client-card ${client.active === 0 ? 'inactive-client' : ''}`} style={client.active === 0 ? {opacity: 0.6} : {}}>
+        {filteredClients.map((client) => (
+            <div key={client.id} className="client-card">
               <div className="client-info">
-                <h3>{client.first_name} {client.last_name} 
-                    <span style={{ fontSize: '12px', backgroundColor: client.client_type === 'employee' ? '#e6f7ff' : '#fff7e6', color: client.client_type === 'employee' ? '#0050b3' : '#d46b08', padding: '2px 8px', borderRadius: '12px', marginLeft: '8px', textTransform: 'capitalize' }}>{client.client_type}</span>
-                    {client.active === 0 && <span style={{fontSize: '11px', backgroundColor: '#e2e3e5', color: '#666', padding: '2px 6px', marginLeft: '8px', borderRadius:'4px'}}>Inactive</span>}
-                </h3>
-                <p className="contact">{client.email} | {client.phone || "No phone"}</p>
+                <h3>{client.first_name} {client.last_name}</h3>
+                <p className="contact">{client.email}</p>
               </div>
               <div style={{display: 'flex', gap: '8px'}}>
-                 {(user.role === "admin" || user.role === "front_desk") && (
-                  <>
-                    <button className="btn-secondary" onClick={() => handleToggleActive(client)}>
-                        {client.active === 1 ? "Deactivate" : "Activate"}
-                    </button>
-                    <button className="btn-secondary" onClick={() => handleEditClick(client)}>Edit</button>
-                    {user.role === "admin" && <button className="btn-secondary" style={{color: '#dc3545'}} onClick={() => handleDeleteClient(client.id, `${client.first_name} ${client.last_name}`)}>Delete</button>}
-                  </>
-                 )}
+                <button className="btn-secondary" onClick={() => handleEditClick(client)}>Edit</button>
                 <button className="btn-secondary" onClick={() => { setSelectedClient(client); loadCars(client.id) }}>View Vehicles</button>
               </div>
             </div>
@@ -146,26 +121,16 @@ export default function ClientsPage({ user, onUpdate, initialFilter }) {
       {selectedClient && (
         <div className="modal-overlay" onClick={() => setSelectedClient(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header"><h2>{selectedClient.first_name} {selectedClient.last_name} - Vehicles</h2><button className="btn-close" onClick={() => setSelectedClient(null)}>×</button></div>
-            {(user.role === "admin" || user.role === "front_desk") && (
-              <>
-                {showCarForm && (
-                  <form onSubmit={handleAddCar} className="car-form">
-                    <input type="text" placeholder="License Plate" value={carForm.license_plate} onChange={(e) => setCarForm({ ...carForm, license_plate: e.target.value })} required />
-                    <input type="text" placeholder="Make" value={carForm.make} onChange={(e) => setCarForm({ ...carForm, make: e.target.value })} required />
-                    <input type="text" placeholder="Model" value={carForm.model} onChange={(e) => setCarForm({ ...carForm, model: e.target.value })} required />
-                    <input type="text" placeholder="Color" value={carForm.color} onChange={(e) => setCarForm({ ...carForm, color: e.target.value })} />
-                    <input type="number" placeholder="Year" value={carForm.year} onChange={(e) => setCarForm({ ...carForm, year: Number.parseInt(e.target.value) })} />
-                    <button type="submit" className="btn-primary">Add Car</button>
-                    <button type="button" className="btn-secondary" onClick={() => setShowCarForm(false)}>Cancel</button>
-                  </form>
-                )}
-                {!showCarForm && <button className="btn-primary" onClick={() => setShowCarForm(true)}>Add New Vehicle</button>}
-              </>
-            )}
+            <div className="modal-header"><h2>Vehicles</h2><button className="btn-close" onClick={() => setSelectedClient(null)}>×</button></div>
+            <form onSubmit={handleAddCar} className="car-form">
+                <input type="text" placeholder="Plate" value={carForm.license_plate} onChange={(e) => setCarForm({ ...carForm, license_plate: e.target.value })} required />
+                <input type="text" placeholder="Make" value={carForm.make} onChange={(e) => setCarForm({ ...carForm, make: e.target.value })} required />
+                <input type="text" placeholder="Model" value={carForm.model} onChange={(e) => setCarForm({ ...carForm, model: e.target.value })} required />
+                <button type="submit" className="btn-primary">Add Car</button>
+            </form>
             <div className="cars-list">
-              {cars.length === 0 ? <p className="empty-message">No vehicles registered</p> : cars.map((car) => (
-                  <div key={car.id} className="car-item"><h4>{car.make} {car.model} ({car.year})</h4><p>License Plate: <strong>{car.license_plate}</strong></p></div>
+              {cars.map((car) => (
+                  <div key={car.id} className="car-item"><h4>{car.make} {car.model}</h4><p>{car.license_plate}</p></div>
                 ))}
             </div>
           </div>

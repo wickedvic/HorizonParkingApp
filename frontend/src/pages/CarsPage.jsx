@@ -24,7 +24,7 @@ export default function CarsPage({ user, onNavigateClient }) {
   }
 
   const handleDeleteCar = async (id, plate) => {
-      if (window.confirm(`Are you sure you want to delete vehicle ${plate}? This will also delete associated permits.`)) {
+      if (window.confirm(`Are you sure you want to delete vehicle ${plate}?`)) {
           try {
               const res = await fetch(`${API_BASE_URL}/cars/${id}`, { method: 'DELETE' });
               if (res.ok) {
@@ -37,7 +37,7 @@ export default function CarsPage({ user, onNavigateClient }) {
   }
 
   const filteredCars = cars.filter((car) => {
-    const searchText = `${car.license_plate} ${car.make} ${car.model} ${car.first_name} ${car.last_name}`.toLowerCase()
+    const searchText = `${car.license_plate} ${car.make} ${car.model} ${car.owner_id}`.toLowerCase()
     const matchesSearch = searchText.includes(filterSearch.toLowerCase())
     const matchesStatus = filterStatus === "all" ? true : filterStatus === "active" ? car.has_active_permit === 1 : car.has_active_permit === 0;
     return matchesSearch && matchesStatus
@@ -70,7 +70,7 @@ export default function CarsPage({ user, onNavigateClient }) {
                 <th>Model</th>
                 <th>Year</th>
                 <th>Color</th>
-                <th>Owner</th>
+                <th>Owner ID</th>
                 {(user.role === "admin") && <th>Actions</th>}
               </tr>
             </thead>
@@ -78,7 +78,8 @@ export default function CarsPage({ user, onNavigateClient }) {
               {filteredCars.map((car) => (
                 <tr key={car.id}>
                   <td>
-                    <strong>{car.license_plate}</strong>
+                    {/* Splits by newline to handle multiline plates in SQL dump */}
+                    <strong>{car.license_plate?.split('\r')[0]}</strong>
                     {car.has_active_permit === 1 && <span style={{ display: 'block', fontSize: '10px', color: '#155724', marginTop: '2px' }}>Active</span>}
                   </td>
                   <td>{car.make}</td>
@@ -86,14 +87,9 @@ export default function CarsPage({ user, onNavigateClient }) {
                   <td>{car.year}</td>
                   <td>{car.color}</td>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <button className="btn-link" style={{ background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', padding: 0, textDecoration: 'underline', fontWeight: '600' }} onClick={() => onNavigateClient(`${car.first_name} ${car.last_name}`)}>
-                        {car.first_name} {car.last_name}
-                        </button>
-                        {car.outstanding_payments > 0 && (
-                            <span title="Outstanding Payment Due" style={{ backgroundColor: '#ffebee', color: '#d32f2f', padding: '2px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', border: '1px solid #ffcdd2' }}>! Unpaid</span>
-                        )}
-                    </div>
+                    <span style={{ fontWeight: '600', color: '#667eea' }}>
+                      {car.owner_id || "Unknown"}
+                    </span>
                   </td>
                   {(user.role === "admin") && (
                       <td>
