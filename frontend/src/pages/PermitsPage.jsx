@@ -40,7 +40,7 @@ export default function PermitsPage({ user, initialFilter }) {
 
   useEffect(() => {
     loadPermits()
-  }, []) // Initial load
+  }, [])
 
   const loadPermits = async () => {
     try {
@@ -52,11 +52,16 @@ export default function PermitsPage({ user, initialFilter }) {
     }
   }
 
-  // Filter logic for the table data
+  // FIXED: Added validation to prevent "Invalid Time Value" crash
   const filteredPermits = useMemo(() => {
     return permits.filter(p => {
-      // Standardize the permit date for comparison
-      const pDate = new Date(p.PermitStartDate).toISOString().split("T")[0];
+      if (!p.PermitStartDate) return false;
+      
+      const dateObj = new Date(p.PermitStartDate);
+      // If date is invalid, skip this row instead of crashing
+      if (isNaN(dateObj.getTime())) return false;
+
+      const pDate = dateObj.toISOString().split("T")[0];
       return pDate >= dateRange.start && pDate <= dateRange.end;
     });
   }, [permits, dateRange]);
@@ -77,11 +82,14 @@ export default function PermitsPage({ user, initialFilter }) {
     } catch (err) { console.error(err) }
   }
 
-  // Helper to make dates look professional (e.g., Mar 16, 2026)
+  // FIXED: Added validation to prevent crash in table cells
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
+    const dateObj = new Date(dateString);
+    if (isNaN(dateObj.getTime())) return "Invalid Date";
+    
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    return dateObj.toLocaleDateString(undefined, options);
   };
 
   const columns = useMemo(
@@ -119,7 +127,6 @@ export default function PermitsPage({ user, initialFilter }) {
         </Button>
       </Stack>
 
-      {/* ISSUE PERMIT FORM */}
       <Collapse in={showForm}>
         <Paper sx={{ p: 3, mb: 3, borderRadius: '12px' }} elevation={2}>
           <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>New Permit Entry</Typography>
@@ -152,7 +159,6 @@ export default function PermitsPage({ user, initialFilter }) {
         </Paper>
       </Collapse>
 
-      {/* DATE RANGE TOGGLE BOX */}
       <Paper sx={{ p: 2, mb: 3, bgcolor: '#f8f9fa', border: '1px solid #e0e0e0' }}>
         <Stack direction="row" spacing={2} alignItems="center">
           <FilterIcon color="action" />
