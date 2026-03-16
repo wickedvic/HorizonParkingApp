@@ -111,9 +111,13 @@ app.post("/permits", async (req, res) => {
 // --- PAYMENTS (Updated for 'Payments' table) ---
 app.get("/payments", async (req, res) => {
   try {
-    const [rows] = await pool.query("SELECT * FROM Payments ORDER BY DateAdded DESC LIMIT 100");
-    res.json(rows);
+    // We remove the 'ORDER BY' for now to ensure the query doesn't fail on a bad column name
+    const [rows] = await pool.query("SELECT * FROM Payments LIMIT 100");
+    
+    // Ensure we always return an array, even if empty
+    res.json(Array.isArray(rows) ? rows : []);
   } catch (err) { 
+    console.error("Payments Query Error:", err.message);
     res.status(500).json({ error: err.message }); 
   }
 });

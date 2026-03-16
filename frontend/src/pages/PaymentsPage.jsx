@@ -17,13 +17,21 @@ export default function PaymentsPage({ user, onUpdate }) {
     loadPayments()
   }, [])
 
-  const loadPayments = async () => {
+const loadPayments = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/payments`)
       const data = await res.json()
-      setPayments(data)
+      
+      // Safety Check: Only set the state if 'data' is actually an array
+      if (Array.isArray(data)) {
+        setPayments(data)
+      } else {
+        console.error("Received non-array response for payments:", data)
+        setPayments([]) // Fallback to empty array to prevent crash
+      }
     } catch (err) {
       console.error("Failed to load payments:", err)
+      setPayments([])
     }
   }
 
