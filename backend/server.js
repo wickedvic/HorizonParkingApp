@@ -47,6 +47,7 @@ app.get("/clients", async (req, res) => {
       id: person.PeopleID,
       firstName: person.First,
       lastName: person.Last,
+      permitNumber: person['Permit #'],
       email: person.EmailAddr,
       phone: person['Cell Phone'] || person['Home Phone'] || "N/A",
       type: person['Client Type'],

@@ -5,20 +5,18 @@ import API_BASE_URL from "../api.js"
 import {
   Box,
   Typography,
-  IconButton,
-  Tooltip,
   Chip,
+  Link, // Added for the clickable permit
   List,
   ListItem,
   ListItemText,
   Divider
 } from "@mui/material";
-import { DirectionsCar as CarIcon, Visibility as ViewIcon } from "@mui/icons-material";
+import { DirectionsCar as CarIcon } from "@mui/icons-material";
 import { MaterialReactTable } from 'material-react-table';
 
-export default function ClientsPage({ user }) {
+export default function ClientsPage({ user, onNavigatePermit }) { // Added navigation prop
   const [clients, setClients] = useState([]);
-  const [loadingCars, setLoadingCars] = useState(false);
   const [allCars, setAllCars] = useState([]);
 
   useEffect(() => {
@@ -37,22 +35,19 @@ export default function ClientsPage({ user }) {
   };
 
   const loadAllCars = async () => {
-    setLoadingCars(true);
     try {
       const res = await fetch(`${API_BASE_URL}/cars`);
       const data = await res.json();
       setAllCars(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to load cars:", err);
-    } finally {
-      setLoadingCars(false);
     }
   };
 
   const columns = useMemo(
     () => [
       {
-        accessorKey: "id", // Maps to PeopleID from your backend
+        accessorKey: "id",
         header: "ID",
         size: 80,
       },
@@ -70,12 +65,29 @@ export default function ClientsPage({ user }) {
         ),
       },
       {
-        accessorKey: "email",
-        header: "Email",
+        // NEW: Permit Number Column
+        accessorKey: "permitNumber", // Maps to 'Permit #' from your SQL
+        header: "Permit #",
+        Cell: ({ cell }) => {
+          const val = cell.getValue();
+          if (!val) return <Typography variant="body2" color="text.disabled">None</Typography>;
+          
+          return (
+            <Link
+              component="button"
+              variant="body2"
+              underline="hover"
+              onClick={() => onNavigatePermit(val)} // Assuming your App.jsx handles routing
+              sx={{ fontWeight: 'bold', color: 'primary.main', textAlign: 'left' }}
+            >
+              {val}
+            </Link>
+          );
+        },
       },
       {
-        accessorKey: "phone",
-        header: "Phone",
+        accessorKey: "email",
+        header: "Email",
       },
       {
         accessorKey: "type",
@@ -85,7 +97,6 @@ export default function ClientsPage({ user }) {
             label={cell.getValue() || 'Standard'} 
             size="small" 
             variant="outlined"
-            color={cell.getValue() === 'VIP' ? 'secondary' : 'default'}
           />
         ),
       },
@@ -104,7 +115,7 @@ export default function ClientsPage({ user }) {
         },
       },
     ],
-    []
+    [onNavigatePermit]
   );
 
   return (
@@ -117,9 +128,6 @@ export default function ClientsPage({ user }) {
         columns={columns}
         data={clients}
         enableColumnOrdering
-        enablePinning
-        enableExpandAll={false}
-        // This creates a "sub-row" feature to show cars without a modal
         renderDetailPanel={({ row }) => {
           const clientVehicles = allCars.filter(car => car.owner_id == row.original.id);
           return (
@@ -143,7 +151,7 @@ export default function ClientsPage({ user }) {
                 </List>
               ) : (
                 <Typography variant="body2" color="text.secondary" sx={{ ml: 4 }}>
-                  No vehicles found for this client.
+                  No vehicles found.
                 </Typography>
               )}
             </Box>
