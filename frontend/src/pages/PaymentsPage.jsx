@@ -29,14 +29,20 @@ export default function PaymentsPage({ user }) {
     try {
       const res = await fetch(`${API_BASE_URL}/payments`);
       const data = await res.json();
-      setPayments(Array.isArray(data) ? data : []);
+      
+      // MASSAGE DATA: Remove rows that don't have a Payer ID or an Amount
+      // This cleans up legacy "null" rows from the SQL dump
+      const cleanData = Array.isArray(data) ? data.filter(p => 
+        p.payer && p.amount > 0 && p.month
+      ) : [];
+
+      setPayments(cleanData);
     } catch (err) {
       console.error("Failed to load payments:", err);
       setPayments([]);
     }
   };
 
-  // Uses the 'amount' key from your formatted backend response
   const totalRevenue = useMemo(() => {
     return payments.reduce((sum, p) => sum + (p.amount || 0), 0);
   }, [payments]);
@@ -47,6 +53,8 @@ export default function PaymentsPage({ user }) {
         accessorKey: "created_at",
         header: "Date Recorded",
         size: 180,
+        // Only show date part if timestamp is messy
+        Cell: ({ cell }) => cell.getValue()?.split(' ')[0] || "N/A",
       },
       {
         accessorKey: "payer",
@@ -81,6 +89,7 @@ export default function PaymentsPage({ user }) {
         accessorKey: "added_by",
         header: "Processed By",
         size: 120,
+        // Don't show if every single row says the same admin name (optional)
         Cell: ({ cell }) => (
           <Chip 
             label={cell.getValue() || 'System'} 
@@ -127,7 +136,7 @@ export default function PaymentsPage({ user }) {
                   <MonthIcon sx={{ color: 'white' }} />
                 </Box>
                 <Box>
-                  <Typography color="text.secondary" variant="overline">Transactions</Typography>
+                  <Typography color="text.secondary" variant="overline">Valid Transactions</Typography>
                   <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
                     {payments.length}
                   </Typography>
@@ -143,9 +152,12 @@ export default function PaymentsPage({ user }) {
         data={payments}
         enableColumnOrdering
         enableGlobalFilter
+        // HIDE EMPTY COLUMNS: If a column is entirely null, MRT allows users to hide it, 
+        // but we've already massaged the data above to prevent this.
         initialState={{ 
           density: 'compact',
-          sorting: [{ id: 'created_at', desc: true }] 
+          sorting: [{ id: 'created_at', desc: true }],
+          columnVisibility: { id: false } // Hide ID column by default as it's just DB noise
         }}
         muiTablePaperProps={{
           elevation: 2,
