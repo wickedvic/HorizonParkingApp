@@ -15,7 +15,7 @@ import {
   Stack,
   Grid,
   Button,
-  Paper // <--- Added this missing import
+  Paper
 } from "@mui/material";
 import { 
   DirectionsCar as CarIcon, 
@@ -54,9 +54,9 @@ export default function ClientsPage({ user }) {
 
   const handleCreateClient = async ({ values, table }) => {
     try {
-      // Auto-generate a permit number
-      const generatedPermit = `P-${Math.floor(1000 + Math.random() * 9000)}`;
-      const payload = { ...values, permitNumber: generatedPermit, addedBy: user?.username || 'Sys' };
+      // If user left permit empty, generate one. If they typed some, use theirs.
+      const permitVal = values.permitNumber || `P-${Math.floor(1000 + Math.random() * 9000)}`;
+      const payload = { ...values, permitNumber: permitVal, addedBy: user?.username || 'Sys' };
 
       const res = await fetch(`${API_BASE_URL}/clients`, {
         method: "POST",
@@ -95,14 +95,24 @@ export default function ClientsPage({ user }) {
       { accessorKey: "lastName", header: "Last Name", muiEditTextFieldProps: { required: true } },
       { accessorKey: "email", header: "Email Address" },
       { accessorKey: "phone", header: "Phone (Cell)" },
-      { accessorKey: "company", header: "Company" },
       { 
         accessorKey: "permitNumber", 
-        header: "Permit #", 
-        enableEditing: false, 
-        Cell: ({ cell }) => <Chip label={cell.getValue() || 'N/A'} size="small" variant="outlined" color="primary" />
+        header: "Permits", 
+        muiEditTextFieldProps: { 
+          helperText: "Enter multiple permits separated by commas (e.g. 101, 102)" 
+        },
+        Cell: ({ cell }) => {
+          const val = cell.getValue();
+          if (!val) return 'N/A';
+          const list = val.toString().split(',').map(p => p.trim());
+          return (
+            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+              {list.map((p, i) => <Chip key={i} label={p} size="small" variant="outlined" />)}
+            </Box>
+          );
+        }
       },
-      // Form-only fields (hidden in table)
+      { accessorKey: "company", header: "Company" },
       { accessorKey: "address", header: "Address" },
       { accessorKey: "city", header: "City" },
       { accessorKey: "state", header: "ST" },
@@ -147,16 +157,18 @@ export default function ClientsPage({ user }) {
         )}
         renderRowActions={({ row, table }) => (
           <Box sx={{ display: 'flex', gap: '0.5rem' }}>
-            <Button size="small" onClick={() => table.setEditingRow(row)}>Edit</Button>
+            <Button size="small" startIcon={<EditIcon />} onClick={() => table.setEditingRow(row)}>Edit</Button>
           </Box>
         )}
         renderDetailPanel={({ row }) => {
           const clientVehicles = allCars.filter(car => car.owner_id == row.original.id);
-          const rawPermits = row.original.permitNumber;
+          const permitString = row.original.permitNumber || "";
+          const permitList = permitString.split(',').map(p => p.trim()).filter(p => p !== "");
 
           return (
             <Box sx={{ p: 2, backgroundColor: '#fcfcfc' }}>
               <Grid container spacing={4}>
+                {/* VEHICLES SECTION */}
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1, fontWeight: 'bold' }}>
                     <CarIcon fontSize="small" color="primary" /> Registered Vehicles
@@ -172,14 +184,25 @@ export default function ClientsPage({ user }) {
                   ) : ( <Typography variant="body2" color="text.secondary">No vehicles found.</Typography> )}
                 </Grid>
 
+                {/* PERMITS SECTION - NOW A SEPARATE LIST */}
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1, fontWeight: 'bold' }}>
-                    <PermitIcon fontSize="small" color="secondary" /> Permanent Permit Info
+                    <PermitIcon fontSize="small" color="secondary" /> Permanent Permits
                   </Typography>
-                  <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.paper' }}>
-                    <Typography variant="body2"><strong>Main Permit:</strong> {rawPermits || 'None Assigned'}</Typography>
-                    <Typography variant="caption" color="text.secondary">Linked to primary account.</Typography>
-                  </Paper>
+                  {permitList.length > 0 ? (
+                    <List sx={{ width: '100%', bgcolor: 'background.paper', borderRadius: 1, border: '1px solid #eee' }}>
+                      {permitList.map((permit, idx) => (
+                        <ListItem key={idx} divider={idx < permitList.length - 1}>
+                          <ListItemText 
+                            primary={`Permit #${permit}`} 
+                            secondary="Permanent Association"
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">No permanent permits assigned.</Typography>
+                  )}
                 </Grid>
               </Grid>
             </Box>
