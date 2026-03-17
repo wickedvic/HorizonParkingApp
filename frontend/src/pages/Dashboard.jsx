@@ -13,10 +13,10 @@ export default function Dashboard({ user, onLogout }) {
   const [currentPage, setCurrentPage] = useState("dashboard")
   const [stats, setStats] = useState({ clients: 0, cars: 0, permits: 0, payments: 0 })
   
-  // States for cross-page navigation filters
+  // Navigation States
   const [initialClientFilter, setInitialClientFilter] = useState("")
+  const [initialCarFilter, setInitialCarFilter] = useState("")
   const [permitFilter, setPermitFilter] = useState("")
-  const [initialCarFilter, setInitialCarFilter] = useState("") // New state for Car deep-linking
 
   useEffect(() => {
     loadStats()
@@ -30,7 +30,6 @@ export default function Dashboard({ user, onLogout }) {
         fetch(`${API_BASE_URL}/permits`),
         fetch(`${API_BASE_URL}/payments`),
       ])
-
       const clients = await clientsRes.json()
       const cars = await carsRes.json()
       const permits = await permitsRes.json()
@@ -42,73 +41,51 @@ export default function Dashboard({ user, onLogout }) {
         permits: Array.isArray(permits) ? permits.length : 0,
         payments: Array.isArray(payments) ? payments.length : 0,
       })
-    } catch (err) {
-      console.error("Failed to load stats:", err)
-    }
+    } catch (err) { console.error("Stats load failed:", err) }
   }
 
-  // Navigation Logic: Jump to Client Page (triggered from CarsPage)
-  const handleNavigateToClients = (clientIdOrName) => {
-    setInitialClientFilter(clientIdOrName)
+  const handleNavigateToClients = (ownerId) => {
+    setInitialClientFilter(ownerId)
     setInitialCarFilter("")
     setPermitFilter("")
     setCurrentPage("clients")
   }
 
-  // Navigation Logic: Jump to Cars Page (triggered from ClientsPage)
-  const handleNavigateToCars = (licensePlate) => {
-    setInitialCarFilter(licensePlate)
+  const handleNavigateToCars = (plate) => {
+    setInitialCarFilter(plate)
     setInitialClientFilter("")
     setPermitFilter("")
     setCurrentPage("cars")
   }
 
-  // Navigation Logic: Jump to Permit Page (triggered from elsewhere)
-  const handleNavigateToPermits = (permitNumber) => {
-    setPermitFilter(permitNumber)
-    setInitialClientFilter("")
+  const handleNavigateToPermits = (num) => {
+    setPermitFilter(num)
     setInitialCarFilter("")
+    setInitialClientFilter("")
     setCurrentPage("permits")
   }
 
-  // Navigation Helper for sidebar (clears ALL filters when manually clicking nav)
   const navTo = (page) => {
     setInitialClientFilter("")
-    setPermitFilter("")
     setInitialCarFilter("")
+    setPermitFilter("")
     setCurrentPage(page)
   }
 
   return (
     <div className="dashboard">
       <aside className="dashboard-sidebar">
-        <div className="sidebar-brand">
-          <h1>🚗 Horizon Parking</h1>
-        </div>
+        <div className="sidebar-brand"><h1>🚗 Horizon Parking</h1></div>
         <nav className="sidebar-nav">
-          <button className={`nav-btn ${currentPage === "dashboard" ? "active" : ""}`} onClick={() => navTo("dashboard")}>
-            📊 Dashboard
-          </button>
-          <button className={`nav-btn ${currentPage === "clients" ? "active" : ""}`} onClick={() => navTo("clients")}>
-            👥 Clients
-          </button>
-          <button className={`nav-btn ${currentPage === "cars" ? "active" : ""}`} onClick={() => navTo("cars")}>
-            🚙 Vehicles
-          </button>
-          <button className={`nav-btn ${currentPage === "permits" ? "active" : ""}`} onClick={() => navTo("permits")}>
-            🎫 Temp Permits
-          </button>
-          <button className={`nav-btn ${currentPage === "payments" ? "active" : ""}`} onClick={() => navTo("payments")}>
-            💰 Billing
-          </button>
-          <button className={`nav-btn ${currentPage === "reports" ? "active" : ""}`} onClick={() => navTo("reports")}>
-            📈 Reports
-          </button>
+          <button className={`nav-btn ${currentPage === "dashboard" ? "active" : ""}`} onClick={() => navTo("dashboard")}>📊 Dashboard</button>
+          <button className={`nav-btn ${currentPage === "clients" ? "active" : ""}`} onClick={() => navTo("clients")}>👥 Clients</button>
+          <button className={`nav-btn ${currentPage === "cars" ? "active" : ""}`} onClick={() => navTo("cars")}>🚙 Vehicles</button>
+          <button className={`nav-btn ${currentPage === "permits" ? "active" : ""}`} onClick={() => navTo("permits")}>🎫 Temporary Permits</button>
+          <button className={`nav-btn ${currentPage === "payments" ? "active" : ""}`} onClick={() => navTo("payments")}>💰 Billing</button>
+          <button className={`nav-btn ${currentPage === "reports" ? "active" : ""}`} onClick={() => navTo("reports")}>📈 Reports</button>
         </nav>
         <div className="sidebar-footer">
-          <div className="user-info">
-            Logged in as <strong>{user.username}</strong>
-          </div>
+          <div className="user-info">Logged in as <strong>{user.username}</strong></div>
           <button onClick={onLogout} className="btn-logout">Sign Out</button>
         </div>
       </aside>
@@ -118,35 +95,10 @@ export default function Dashboard({ user, onLogout }) {
           <div className="animate-fade-in">
             <h2 className="page-title">Dashboard Overview</h2>
             <div className="stats-grid">
-              <div className="stat-card info">
-                <h3>Total Clients</h3>
-                <p className="stat-number">{stats.clients}</p>
-              </div>
-              <div className="stat-card warning">
-                <h3>Total Vehicles</h3>
-                <p className="stat-number">{stats.cars}</p>
-              </div>
-              <div className="stat-card success">
-                <h3>Permit Records</h3>
-                <p className="stat-number">{stats.permits}</p>
-              </div>
-              <div className="stat-card primary">
-                <h3>Payment Records</h3>
-                <p className="stat-number">{stats.payments}</p>
-              </div>
-            </div>
-
-            <h3 style={{marginBottom: '20px', color: '#2c3e50', borderBottom: '1px solid #eee', paddingBottom: '10px'}}>Quick Actions</h3>
-            <div className="dashboard-actions">
-                <button className="action-btn" onClick={() => navTo("clients")}>
-                    <span style={{fontSize: '24px', marginRight: '10px'}}>👥</span> Manage People
-                </button>
-                <button className="action-btn" onClick={() => navTo("permits")}>
-                    <span style={{fontSize: '24px', marginRight: '10px'}}>🎫</span> Issue Permit
-                </button>
-                <button className="action-btn" onClick={() => navTo("payments")}>
-                    <span style={{fontSize: '24px', marginRight: '10px'}}>💰</span> Billing History
-                </button>
+              <div className="stat-card info"><h3>Total Clients</h3><p className="stat-number">{stats.clients}</p></div>
+              <div className="stat-card warning"><h3>Total Vehicles</h3><p className="stat-number">{stats.cars}</p></div>
+              <div className="stat-card success"><h3>Permit Records</h3><p className="stat-number">{stats.permits}</p></div>
+              <div className="stat-card primary"><h3>Payment Records</h3><p className="stat-number">{stats.payments}</p></div>
             </div>
           </div>
         )}
@@ -154,35 +106,21 @@ export default function Dashboard({ user, onLogout }) {
         {currentPage === "clients" && (
           <ClientsPage 
             user={user} 
-            onUpdate={loadStats} 
             initialFilter={initialClientFilter} 
-            onNavigateCar={handleNavigateToCars} // New bridge for vehicle deep-linking
+            onNavigateCar={handleNavigateToCars} 
             onNavigatePermit={handleNavigateToPermits} 
           />
         )}
-
         {currentPage === "cars" && (
           <CarsPage 
             user={user} 
-            initialFilter={initialCarFilter} // Pass the license plate filter
-            onNavigateClient={handleNavigateToClients} // Bridge back to clients
+            initialFilter={initialCarFilter} 
+            onNavigateClient={handleNavigateToClients} 
           />
         )}
-
-        {currentPage === "permits" && (
-          <PermitsPage 
-            user={user} 
-            initialFilter={permitFilter} 
-          />
-        )}
-
-        {currentPage === "payments" && (
-          <PaymentsPage user={user} onUpdate={loadStats} />
-        )}
-
-        {currentPage === "reports" && (
-          <ReportsPage user={user} />
-        )}
+        {currentPage === "permits" && <PermitsPage user={user} initialFilter={permitFilter} />}
+        {currentPage === "payments" && <PaymentsPage user={user} onUpdate={loadStats} />}
+        {currentPage === "reports" && <ReportsPage user={user} />}
       </main>
     </div>
   )
