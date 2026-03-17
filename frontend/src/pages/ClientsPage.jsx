@@ -32,6 +32,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     try {
       const res = await fetch(`${API_BASE_URL}/clients`);
       const data = await res.json();
+      console.log("CLIENT DATA", data)
       setClients(Array.isArray(data) ? data.filter(row => row.id) : []);
     } catch (err) { console.error(err); }
   };
