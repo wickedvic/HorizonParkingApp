@@ -15,6 +15,7 @@ import {
   Stack,
   Grid,
   Button,
+  Paper // <--- Added this missing import
 } from "@mui/material";
 import { 
   DirectionsCar as CarIcon, 
@@ -51,12 +52,11 @@ export default function ClientsPage({ user }) {
     } catch (err) { console.error("Failed to load cars:", err); }
   };
 
-  // CREATE: Handler for adding a new client
   const handleCreateClient = async ({ values, table }) => {
     try {
-      // Auto-generate a permit number (Example: PERM-XXXX)
+      // Auto-generate a permit number
       const generatedPermit = `P-${Math.floor(1000 + Math.random() * 9000)}`;
-      const payload = { ...values, permitNumber: generatedPermit };
+      const payload = { ...values, permitNumber: generatedPermit, addedBy: user?.username || 'Sys' };
 
       const res = await fetch(`${API_BASE_URL}/clients`, {
         method: "POST",
@@ -65,12 +65,11 @@ export default function ClientsPage({ user }) {
       });
       if (res.ok) {
         loadClients();
-        table.setCreatingRow(null); // Close the modal
+        table.setCreatingRow(null); 
       }
     } catch (err) { console.error("Error creating client:", err); }
   };
 
-  // UPDATE: Handler for editing existing client
   const handleSaveClient = async ({ values, table }) => {
     try {
       const res = await fetch(`${API_BASE_URL}/clients/${values.id}`, {
@@ -80,7 +79,7 @@ export default function ClientsPage({ user }) {
       });
       if (res.ok) {
         loadClients();
-        table.setEditingRow(null); // Close the modal
+        table.setEditingRow(null); 
       }
     } catch (err) { console.error("Error updating client:", err); }
   };
@@ -100,11 +99,11 @@ export default function ClientsPage({ user }) {
       { 
         accessorKey: "permitNumber", 
         header: "Permit #", 
-        enableEditing: false, // Auto-generated on create
+        enableEditing: false, 
         Cell: ({ cell }) => <Chip label={cell.getValue() || 'N/A'} size="small" variant="outlined" color="primary" />
       },
-      // Fields hidden in the main table but visible in the Edit Modal
-      { accessorKey: "address", header: "Address", muiEditTextFieldProps: { fullWidth: true } },
+      // Form-only fields (hidden in table)
+      { accessorKey: "address", header: "Address" },
       { accessorKey: "city", header: "City" },
       { accessorKey: "state", header: "ST" },
       { accessorKey: "zip", header: "Zip" },
@@ -127,34 +126,28 @@ export default function ClientsPage({ user }) {
     <Box sx={{ p: 3 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Client Directory</Typography>
-        <Stack direction="row" spacing={2}>
-          <ToggleButtonGroup color="primary" value={statusFilter} exclusive onChange={(e, val) => val && setStatusFilter(val)} size="small">
-            <ToggleButton value="active">Active</ToggleButton>
-            <ToggleButton value="inactive">Inactive</ToggleButton>
-          </ToggleButtonGroup>
-        </Stack>
+        <ToggleButtonGroup color="primary" value={statusFilter} exclusive onChange={(e, val) => val && setStatusFilter(val)} size="small">
+          <ToggleButton value="active">Active</ToggleButton>
+          <ToggleButton value="inactive">Inactive</ToggleButton>
+        </ToggleButtonGroup>
       </Stack>
 
       <MaterialReactTable
         columns={columns}
         data={displayedClients}
-        editDisplayMode="modal" // Modern popup form
+        editDisplayMode="modal"
         enableEditing={true}
         getRowId={(row) => row.id}
         onEditingRowSave={handleSaveClient}
         onCreatingRowSave={handleCreateClient}
-        // Top Toolbar button for Add Client
         renderTopToolbarCustomActions={({ table }) => (
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>
             Add New Client
           </Button>
         )}
-        // Row actions for Edit
         renderRowActions={({ row, table }) => (
-          <Box sx={{ display: 'flex', gap: '1rem' }}>
-            <Button size="small" startIcon={<EditIcon />} onClick={() => table.setEditingRow(row)}>
-              Edit
-            </Button>
+          <Box sx={{ display: 'flex', gap: '0.5rem' }}>
+            <Button size="small" onClick={() => table.setEditingRow(row)}>Edit</Button>
           </Box>
         )}
         renderDetailPanel={({ row }) => {
@@ -185,7 +178,7 @@ export default function ClientsPage({ user }) {
                   </Typography>
                   <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.paper' }}>
                     <Typography variant="body2"><strong>Main Permit:</strong> {rawPermits || 'None Assigned'}</Typography>
-                    <Typography variant="caption" color="text.secondary">This permit is linked to the primary account and differs from temporary daily permits.</Typography>
+                    <Typography variant="caption" color="text.secondary">Linked to primary account.</Typography>
                   </Paper>
                 </Grid>
               </Grid>
@@ -195,7 +188,7 @@ export default function ClientsPage({ user }) {
         initialState={{ 
           density: 'compact',
           sorting: [{ id: 'fullName', desc: false }],
-          columnVisibility: { address: false, city: false, state: false, zip: false, ccNum: false, ccExp: false } // Hide clutter in table, but shows in Edit Modal
+          columnVisibility: { address: false, city: false, state: false, zip: false, ccNum: false, ccExp: false } 
         }}
       />
     </Box>
