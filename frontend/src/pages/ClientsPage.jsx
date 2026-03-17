@@ -13,9 +13,13 @@ import {
   Divider,
   ToggleButton,
   ToggleButtonGroup,
-  Stack
+  Stack,
+  Grid
 } from "@mui/material";
-import { DirectionsCar as CarIcon } from "@mui/icons-material";
+import { 
+  DirectionsCar as CarIcon, 
+  ConfirmationNumber as PermitIcon 
+} from "@mui/icons-material";
 import { MaterialReactTable } from 'material-react-table';
 
 export default function ClientsPage({ user, onNavigatePermit }) {
@@ -32,12 +36,9 @@ export default function ClientsPage({ user, onNavigatePermit }) {
     try {
       const res = await fetch(`${API_BASE_URL}/clients`);
       const data = await res.json();
-      
-      // MASSAGE DATA: Remove completely empty rows or rows without a name/ID
       const cleanData = Array.isArray(data) ? data.filter(row => 
         row.id && (row.firstName || row.lastName)
       ) : [];
-      
       setClients(cleanData);
     } catch (err) {
       console.error("Failed to load clients:", err);
@@ -54,7 +55,6 @@ export default function ClientsPage({ user, onNavigatePermit }) {
     }
   };
 
-  // Filter clients based on the Toggle Button
   const displayedClients = useMemo(() => {
     return clients.filter(c => c.status?.toLowerCase() === statusFilter.toLowerCase());
   }, [clients, statusFilter]);
@@ -80,34 +80,6 @@ export default function ClientsPage({ user, onNavigatePermit }) {
         ),
       },
       {
-        accessorKey: "permitNumber",
-        header: "Permits",
-        Cell: ({ cell }) => {
-          const val = cell.getValue();
-          if (!val) return <Typography variant="caption" color="text.disabled">None</Typography>;
-          
-          // Split by comma in case there are multiple permits (e.g., "101, 102")
-          const permitList = val.toString().split(',').map(p => p.trim());
-          
-          return (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-              {permitList.map((permit, index) => (
-                <Link
-                  key={index}
-                  component="button"
-                  variant="body2"
-                  onClick={() => onNavigatePermit(permit)}
-                  sx={{ fontWeight: 'bold', fontSize: '0.85rem' }}
-                >
-                  #{permit}
-                  {index < permitList.length - 1 && ","}
-                </Link>
-              ))}
-            </Box>
-          );
-        },
-      },
-      {
         accessorKey: "email",
         header: "Email",
       },
@@ -123,7 +95,7 @@ export default function ClientsPage({ user, onNavigatePermit }) {
         ),
       },
     ],
-    [onNavigatePermit]
+    []
   );
 
   return (
@@ -151,30 +123,69 @@ export default function ClientsPage({ user, onNavigatePermit }) {
         enableColumnOrdering
         renderDetailPanel={({ row }) => {
           const clientVehicles = allCars.filter(car => car.owner_id == row.original.id);
+          const rawPermits = row.original.permitNumber;
+          const permitList = rawPermits ? rawPermits.toString().split(',').map(p => p.trim()) : [];
+
           return (
             <Box sx={{ p: 2, backgroundColor: '#fcfcfc' }}>
-              <Typography variant="subtitle2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CarIcon fontSize="small" /> Registered Vehicles
-              </Typography>
-              {clientVehicles.length > 0 ? (
-                <List sx={{ width: '100%', maxWidth: 400, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid #eee' }}>
-                  {clientVehicles.map((car, idx) => (
-                    <React.Fragment key={car.id}>
-                      <ListItem>
-                        <ListItemText 
-                          primary={`${car.make} ${car.model}`} 
-                          secondary={`Plate: ${car.license_plate?.split('\r')[0]} | Color: ${car.color}`} 
-                        />
-                      </ListItem>
-                      {idx < clientVehicles.length - 1 && <Divider />}
-                    </React.Fragment>
-                  ))}
-                </List>
-              ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ ml: 4 }}>
-                  No vehicles found.
-                </Typography>
-              )}
+              <Grid container spacing={4}>
+                {/* VEHICLES SECTION */}
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1, fontWeight: 'bold' }}>
+                    <CarIcon fontSize="small" color="primary" /> Registered Vehicles
+                  </Typography>
+                  {clientVehicles.length > 0 ? (
+                    <List sx={{ width: '100%', bgcolor: 'background.paper', borderRadius: 1, border: '1px solid #eee' }}>
+                      {clientVehicles.map((car, idx) => (
+                        <React.Fragment key={car.id}>
+                          <ListItem>
+                            <ListItemText 
+                              primary={`${car.make} ${car.model}`} 
+                              secondary={`Plate: ${car.license_plate?.split('\r')[0]} | Color: ${car.color}`} 
+                            />
+                          </ListItem>
+                          {idx < clientVehicles.length - 1 && <Divider />}
+                        </React.Fragment>
+                      ))}
+                    </List>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">No vehicles found.</Typography>
+                  )}
+                </Grid>
+
+                {/* PERMITS SECTION */}
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1, fontWeight: 'bold' }}>
+                    <PermitIcon fontSize="small" color="secondary" /> Active Permits
+                  </Typography>
+                  {permitList.length > 0 ? (
+                    <List sx={{ width: '100%', bgcolor: 'background.paper', borderRadius: 1, border: '1px solid #eee' }}>
+                      {permitList.map((permit, idx) => (
+                        <React.Fragment key={idx}>
+                          <ListItem>
+                            <ListItemText 
+                              primary={
+                                <Link
+                                  component="button"
+                                  variant="body2"
+                                  onClick={() => onNavigatePermit(permit)}
+                                  sx={{ fontWeight: 'bold', textDecoration: 'none' }}
+                                >
+                                  Permit #{permit}
+                                </Link>
+                              }
+                              secondary="Click to view permit details"
+                            />
+                          </ListItem>
+                          {idx < permitList.length - 1 && <Divider />}
+                        </React.Fragment>
+                      ))}
+                    </List>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">No permits found.</Typography>
+                  )}
+                </Grid>
+              </Grid>
             </Box>
           );
         }}
