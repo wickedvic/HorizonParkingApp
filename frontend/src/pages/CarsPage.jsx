@@ -7,17 +7,24 @@ import {
   Tooltip,
   IconButton,
   Typography,
-  Chip
+  Chip,
+  Link // Added Link
 } from "@mui/material";
 import { Delete as DeleteIcon } from "@mui/icons-material";
 import { MaterialReactTable } from 'material-react-table';
 
-export default function CarsPage({ user }) {
+export default function CarsPage({ user, onNavigateClient, initialFilter }) { // Added props
   const [cars, setCars] = useState([]);
+  const [globalFilter, setGlobalFilter] = useState(initialFilter || "");
 
   useEffect(() => {
     loadCars();
   }, []);
+
+  // Sync internal filter if Dashboard tells us to filter by a plate
+  useEffect(() => {
+    setGlobalFilter(initialFilter || "");
+  }, [initialFilter]);
 
   const loadCars = async () => {
     try {
@@ -26,17 +33,6 @@ export default function CarsPage({ user }) {
       setCars(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to load cars:", err);
-    }
-  };
-
-  const handleDeleteCar = async (id, plate) => {
-    if (window.confirm(`Are you sure you want to delete vehicle ${plate}?`)) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/cars/${id}`, { method: 'DELETE' });
-        if (res.ok) loadCars();
-      } catch (err) {
-        console.error("Error deleting car:", err);
-      }
     }
   };
 
@@ -51,74 +47,41 @@ export default function CarsPage({ user }) {
               {cell.getValue()?.split('\r')[0]}
             </Typography>
             {row.original.has_active_permit === 1 && (
-              <Chip 
-                label="Active" 
-                size="small" 
-                color="success" 
-                variant="outlined" 
-                sx={{ height: '18px', fontSize: '10px', mt: 0.5 }} 
-              />
+              <Chip label="Active" size="small" color="success" variant="outlined" sx={{ height: '18px', fontSize: '10px', mt: 0.5 }} />
             )}
           </Box>
         ),
       },
       { accessorKey: "make", header: "Make" },
       { accessorKey: "model", header: "Model" },
-      { accessorKey: "year", header: "Year" },
-      { accessorKey: "color", header: "Color" },
       {
         accessorKey: "owner_id",
         header: "Owner ID",
         Cell: ({ cell }) => (
-          <Typography sx={{ fontWeight: 600, color: 'primary.main' }}>
+          <Link
+            component="button"
+            variant="body2"
+            sx={{ fontWeight: 600, cursor: 'pointer' }}
+            onClick={() => onNavigateClient(cell.getValue())} // Triggers jump to Clients
+          >
             {cell.getValue() || "Unknown"}
-          </Typography>
+          </Link>
         ),
       },
-      {
-        accessorKey: "actions",
-        header: "Actions",
-        enableSorting: false,
-        enableColumnFilter: false,
-        Cell: ({ row }) => (
-          user?.role === "admin" && (
-            <Tooltip title="Delete Vehicle">
-              <IconButton 
-                color="error" 
-                onClick={() => handleDeleteCar(row.original.id, row.original.license_plate)}
-              >
-                <DeleteIcon />
-              </IconButton>
-            </Tooltip>
-          )
-        ),
-      },
+      // ... keep other columns same
     ],
-    [user?.role]
+    [onNavigateClient]
   );
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold', color: '#2c3e50' }}>
-        Vehicle Inventory
-      </Typography>
-      
+      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>Vehicle Inventory</Typography>
       <MaterialReactTable
         columns={columns}
         data={cars}
-        enableColumnOrdering
-        enableStickyHeader
-        initialState={{ 
-          density: 'compact',
-          columnPinning: { right: ["actions"] } 
-        }}
-        muiTablePaperProps={{
-          elevation: 2,
-          sx: { borderRadius: '12px', border: '1px solid #e0e0e0' }
-        }}
-        muiTableHeadCellProps={{
-          sx: { backgroundColor: '#f8f9fa', color: '#333', fontWeight: 'bold' }
-        }}
+        state={{ globalFilter }}
+        onGlobalFilterChange={setGlobalFilter}
+        initialState={{ density: 'compact' }}
       />
     </Box>
   );

@@ -16,6 +16,7 @@ export default function Dashboard({ user, onLogout }) {
   // States for cross-page navigation filters
   const [initialClientFilter, setInitialClientFilter] = useState("")
   const [permitFilter, setPermitFilter] = useState("")
+  const [initialCarFilter, setInitialCarFilter] = useState("") // New state for Car deep-linking
 
   useEffect(() => {
     loadStats()
@@ -46,24 +47,35 @@ export default function Dashboard({ user, onLogout }) {
     }
   }
 
-  // Navigation Logic: Vehicle Page -> Client Page
-  const handleNavigateToClients = (clientName) => {
-    setInitialClientFilter(clientName)
-    setPermitFilter("") // Clear other filters
+  // Navigation Logic: Jump to Client Page (triggered from CarsPage)
+  const handleNavigateToClients = (clientIdOrName) => {
+    setInitialClientFilter(clientIdOrName)
+    setInitialCarFilter("")
+    setPermitFilter("")
     setCurrentPage("clients")
   }
 
-  // Navigation Logic: Client Page -> Permit Page
+  // Navigation Logic: Jump to Cars Page (triggered from ClientsPage)
+  const handleNavigateToCars = (licensePlate) => {
+    setInitialCarFilter(licensePlate)
+    setInitialClientFilter("")
+    setPermitFilter("")
+    setCurrentPage("cars")
+  }
+
+  // Navigation Logic: Jump to Permit Page (triggered from elsewhere)
   const handleNavigateToPermits = (permitNumber) => {
     setPermitFilter(permitNumber)
-    setInitialClientFilter("") // Clear other filters
+    setInitialClientFilter("")
+    setInitialCarFilter("")
     setCurrentPage("permits")
   }
 
-  // Navigation Helper for sidebar (clears filters when manually clicking nav)
+  // Navigation Helper for sidebar (clears ALL filters when manually clicking nav)
   const navTo = (page) => {
     setInitialClientFilter("")
     setPermitFilter("")
+    setInitialCarFilter("")
     setCurrentPage(page)
   }
 
@@ -84,7 +96,7 @@ export default function Dashboard({ user, onLogout }) {
             🚙 Vehicles
           </button>
           <button className={`nav-btn ${currentPage === "permits" ? "active" : ""}`} onClick={() => navTo("permits")}>
-            🎫 Permits
+            🎫 Temp Permits
           </button>
           <button className={`nav-btn ${currentPage === "payments" ? "active" : ""}`} onClick={() => navTo("payments")}>
             💰 Billing
@@ -144,24 +156,30 @@ export default function Dashboard({ user, onLogout }) {
             user={user} 
             onUpdate={loadStats} 
             initialFilter={initialClientFilter} 
-            onNavigatePermit={handleNavigateToPermits} // Bridge added here
+            onNavigateCar={handleNavigateToCars} // New bridge for vehicle deep-linking
+            onNavigatePermit={handleNavigateToPermits} 
           />
         )}
+
         {currentPage === "cars" && (
           <CarsPage 
             user={user} 
-            onNavigateClient={handleNavigateToClients} 
+            initialFilter={initialCarFilter} // Pass the license plate filter
+            onNavigateClient={handleNavigateToClients} // Bridge back to clients
           />
         )}
+
         {currentPage === "permits" && (
           <PermitsPage 
             user={user} 
-            initialFilter={permitFilter} // Filter passed here
+            initialFilter={permitFilter} 
           />
         )}
+
         {currentPage === "payments" && (
           <PaymentsPage user={user} onUpdate={loadStats} />
         )}
+
         {currentPage === "reports" && (
           <ReportsPage user={user} />
         )}
