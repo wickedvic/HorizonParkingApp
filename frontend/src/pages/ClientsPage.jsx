@@ -6,7 +6,6 @@ import {
   Box,
   Typography,
   Chip,
-  Link,
   List,
   ListItem,
   ListItemText,
@@ -14,15 +13,18 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Stack,
-  Grid
+  Grid,
+  Button,
 } from "@mui/material";
 import { 
   DirectionsCar as CarIcon, 
-  ConfirmationNumber as PermitIcon 
+  Badge as PermitIcon,
+  Add as AddIcon,
+  Edit as EditIcon 
 } from "@mui/icons-material";
 import { MaterialReactTable } from 'material-react-table';
 
-export default function ClientsPage({ user, onNavigatePermit }) {
+export default function ClientsPage({ user }) {
   const [clients, setClients] = useState([]);
   const [allCars, setAllCars] = useState([]);
   const [statusFilter, setStatusFilter] = useState("active");
@@ -36,13 +38,9 @@ export default function ClientsPage({ user, onNavigatePermit }) {
     try {
       const res = await fetch(`${API_BASE_URL}/clients`);
       const data = await res.json();
-      const cleanData = Array.isArray(data) ? data.filter(row => 
-        row.id && (row.firstName || row.lastName)
-      ) : [];
+      const cleanData = Array.isArray(data) ? data.filter(row => row.id) : [];
       setClients(cleanData);
-    } catch (err) {
-      console.error("Failed to load clients:", err);
-    }
+    } catch (err) { console.error("Failed to load clients:", err); }
   };
 
   const loadAllCars = async () => {
@@ -50,9 +48,41 @@ export default function ClientsPage({ user, onNavigatePermit }) {
       const res = await fetch(`${API_BASE_URL}/cars`);
       const data = await res.json();
       setAllCars(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Failed to load cars:", err);
-    }
+    } catch (err) { console.error("Failed to load cars:", err); }
+  };
+
+  // CREATE: Handler for adding a new client
+  const handleCreateClient = async ({ values, table }) => {
+    try {
+      // Auto-generate a permit number (Example: PERM-XXXX)
+      const generatedPermit = `P-${Math.floor(1000 + Math.random() * 9000)}`;
+      const payload = { ...values, permitNumber: generatedPermit };
+
+      const res = await fetch(`${API_BASE_URL}/clients`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        loadClients();
+        table.setCreatingRow(null); // Close the modal
+      }
+    } catch (err) { console.error("Error creating client:", err); }
+  };
+
+  // UPDATE: Handler for editing existing client
+  const handleSaveClient = async ({ values, table }) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/clients/${values.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      if (res.ok) {
+        loadClients();
+        table.setEditingRow(null); // Close the modal
+      }
+    } catch (err) { console.error("Error updating client:", err); }
   };
 
   const displayedClients = useMemo(() => {
@@ -61,37 +91,32 @@ export default function ClientsPage({ user, onNavigatePermit }) {
 
   const columns = useMemo(
     () => [
-      {
-        accessorKey: "id",
-        header: "ID",
-        size: 80,
+      { accessorKey: "id", header: "ID", enableEditing: false, size: 80 },
+      { accessorKey: "firstName", header: "First Name", muiEditTextFieldProps: { required: true } },
+      { accessorKey: "lastName", header: "Last Name", muiEditTextFieldProps: { required: true } },
+      { accessorKey: "email", header: "Email Address" },
+      { accessorKey: "phone", header: "Phone (Cell)" },
+      { accessorKey: "company", header: "Company" },
+      { 
+        accessorKey: "permitNumber", 
+        header: "Permit #", 
+        enableEditing: false, // Auto-generated on create
+        Cell: ({ cell }) => <Chip label={cell.getValue() || 'N/A'} size="small" variant="outlined" color="primary" />
       },
-      {
-        accessorFn: (row) => `${row.firstName} ${row.lastName}`,
-        id: "fullName",
-        header: "Name",
-        Cell: ({ renderedCellValue, row }) => (
-          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            <Typography sx={{ fontWeight: 'bold' }}>{renderedCellValue}</Typography>
-            <Typography variant="caption" color="text.secondary">
-              {row.original.company || "No Company"}
-            </Typography>
-          </Box>
-        ),
-      },
-      {
-        accessorKey: "email",
-        header: "Email",
-      },
+      // Fields hidden in the main table but visible in the Edit Modal
+      { accessorKey: "address", header: "Address", muiEditTextFieldProps: { fullWidth: true } },
+      { accessorKey: "city", header: "City" },
+      { accessorKey: "state", header: "ST" },
+      { accessorKey: "zip", header: "Zip" },
+      { accessorKey: "ccNum", header: "Credit Card #" },
+      { accessorKey: "ccExp", header: "CC Exp" },
       {
         accessorKey: "status",
         header: "Status",
+        editVariant: 'select',
+        editSelectOptions: ['active', 'inactive'],
         Cell: ({ cell }) => (
-          <Chip 
-            label={cell.getValue() || 'Unknown'} 
-            size="small" 
-            color={cell.getValue()?.toLowerCase() === 'active' ? 'success' : 'error'}
-          />
+          <Chip label={cell.getValue() || 'active'} size="small" color={cell.getValue() === 'active' ? 'success' : 'error'} />
         ),
       },
     ],
@@ -101,35 +126,44 @@ export default function ClientsPage({ user, onNavigatePermit }) {
   return (
     <Box sx={{ p: 3 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-          Client Directory
-        </Typography>
-
-        <ToggleButtonGroup
-          color="primary"
-          value={statusFilter}
-          exclusive
-          onChange={(e, val) => val && setStatusFilter(val)}
-          size="small"
-        >
-          <ToggleButton value="active">Active</ToggleButton>
-          <ToggleButton value="inactive">Inactive</ToggleButton>
-        </ToggleButtonGroup>
+        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Client Directory</Typography>
+        <Stack direction="row" spacing={2}>
+          <ToggleButtonGroup color="primary" value={statusFilter} exclusive onChange={(e, val) => val && setStatusFilter(val)} size="small">
+            <ToggleButton value="active">Active</ToggleButton>
+            <ToggleButton value="inactive">Inactive</ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
       </Stack>
 
       <MaterialReactTable
         columns={columns}
         data={displayedClients}
-        enableColumnOrdering
+        editDisplayMode="modal" // Modern popup form
+        enableEditing={true}
+        getRowId={(row) => row.id}
+        onEditingRowSave={handleSaveClient}
+        onCreatingRowSave={handleCreateClient}
+        // Top Toolbar button for Add Client
+        renderTopToolbarCustomActions={({ table }) => (
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>
+            Add New Client
+          </Button>
+        )}
+        // Row actions for Edit
+        renderRowActions={({ row, table }) => (
+          <Box sx={{ display: 'flex', gap: '1rem' }}>
+            <Button size="small" startIcon={<EditIcon />} onClick={() => table.setEditingRow(row)}>
+              Edit
+            </Button>
+          </Box>
+        )}
         renderDetailPanel={({ row }) => {
           const clientVehicles = allCars.filter(car => car.owner_id == row.original.id);
           const rawPermits = row.original.permitNumber;
-          const permitList = rawPermits ? rawPermits.toString().split(',').map(p => p.trim()) : [];
 
           return (
             <Box sx={{ p: 2, backgroundColor: '#fcfcfc' }}>
               <Grid container spacing={4}>
-                {/* VEHICLES SECTION */}
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1, fontWeight: 'bold' }}>
                     <CarIcon fontSize="small" color="primary" /> Registered Vehicles
@@ -137,53 +171,22 @@ export default function ClientsPage({ user, onNavigatePermit }) {
                   {clientVehicles.length > 0 ? (
                     <List sx={{ width: '100%', bgcolor: 'background.paper', borderRadius: 1, border: '1px solid #eee' }}>
                       {clientVehicles.map((car, idx) => (
-                        <React.Fragment key={car.id}>
-                          <ListItem>
-                            <ListItemText 
-                              primary={`${car.make} ${car.model}`} 
-                              secondary={`Plate: ${car.license_plate?.split('\r')[0]} | Color: ${car.color}`} 
-                            />
-                          </ListItem>
-                          {idx < clientVehicles.length - 1 && <Divider />}
-                        </React.Fragment>
+                        <ListItem key={car.id} divider={idx < clientVehicles.length - 1}>
+                          <ListItemText primary={`${car.make} ${car.model}`} secondary={`Plate: ${car.license_plate?.split('\r')[0]} | Color: ${car.color}`} />
+                        </ListItem>
                       ))}
                     </List>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">No vehicles found.</Typography>
-                  )}
+                  ) : ( <Typography variant="body2" color="text.secondary">No vehicles found.</Typography> )}
                 </Grid>
 
-                {/* PERMITS SECTION */}
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1, fontWeight: 'bold' }}>
-                    <PermitIcon fontSize="small" color="secondary" /> Active Permits
+                    <PermitIcon fontSize="small" color="secondary" /> Permanent Permit Info
                   </Typography>
-                  {permitList.length > 0 ? (
-                    <List sx={{ width: '100%', bgcolor: 'background.paper', borderRadius: 1, border: '1px solid #eee' }}>
-                      {permitList.map((permit, idx) => (
-                        <React.Fragment key={idx}>
-                          <ListItem>
-                            <ListItemText 
-                              primary={
-                                <Link
-                                  component="button"
-                                  variant="body2"
-                                  onClick={() => onNavigatePermit(permit)}
-                                  sx={{ fontWeight: 'bold', textDecoration: 'none' }}
-                                >
-                                  Permit #{permit}
-                                </Link>
-                              }
-                              secondary="Click to view permit details"
-                            />
-                          </ListItem>
-                          {idx < permitList.length - 1 && <Divider />}
-                        </React.Fragment>
-                      ))}
-                    </List>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">No permits found.</Typography>
-                  )}
+                  <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.paper' }}>
+                    <Typography variant="body2"><strong>Main Permit:</strong> {rawPermits || 'None Assigned'}</Typography>
+                    <Typography variant="caption" color="text.secondary">This permit is linked to the primary account and differs from temporary daily permits.</Typography>
+                  </Paper>
                 </Grid>
               </Grid>
             </Box>
@@ -191,11 +194,8 @@ export default function ClientsPage({ user, onNavigatePermit }) {
         }}
         initialState={{ 
           density: 'compact',
-          sorting: [{ id: 'fullName', desc: false }] 
-        }}
-        muiTablePaperProps={{
-          elevation: 2,
-          sx: { borderRadius: '12px' }
+          sorting: [{ id: 'fullName', desc: false }],
+          columnVisibility: { address: false, city: false, state: false, zip: false, ccNum: false, ccExp: false } // Hide clutter in table, but shows in Edit Modal
         }}
       />
     </Box>
