@@ -16,7 +16,7 @@ const dbConfig = {
   port: process.env.DB_PORT,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME, // Confirmed as parkingapp_data
+  database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -29,7 +29,6 @@ const pool = mysql.createPool(dbConfig);
 app.post("/auth/login", async (req, res) => {
   const { username, password } = req.body;
   try {
-    // Queries the 'users' table we created inside the Docker container
     const [rows] = await pool.query("SELECT * FROM users WHERE username = ? AND password = ?", [username, password]);
     if (rows.length === 0) return res.status(401).json({ error: "Invalid credentials" });
     res.json({ id: rows[0].id, username: rows[0].username, role: rows[0].role });
@@ -38,21 +37,27 @@ app.post("/auth/login", async (req, res) => {
   }
 });
 
+// --- CLIENTS (PEOPLE TABLE) ---
 app.get("/clients", async (req, res) => {
   try {
-    const [rows] = await pool.query("SELECT * FROM People");
+    const [rows] = await pool.query("SELECT * FROM People ORDER BY Last ASC");
     
-    // Mapping SQL names (First, Last, PeopleID) to keys used in JSX
     const formattedPeople = rows.map(person => ({
       id: person.PeopleID,
       firstName: person.First,
       lastName: person.Last,
-      permitNumber: person['Permit #'],
-      email: person.EmailAddr,
+      address: person.Address,
+      city: person.City,
+      state: person.ST,
+      zip: person.zip,
       phone: person['Cell Phone'] || person['Home Phone'] || "N/A",
-      type: person['Client Type'],
+      permitNumber: person['Permit #'],
+      feeCharged: person['Fee Charged'],
+      email: person.EmailAddr,
       company: person.Company,
-      status: person.Status
+      status: person.Status,
+      ccNum: person.CreditCardNum,
+      ccExp: person.CreditCardExpDate
     }));
 
     res.json(formattedPeople);
@@ -61,12 +66,49 @@ app.get("/clients", async (req, res) => {
   }
 });
 
-// --- CARS (Updated for 'Cars' table mapping) ---
+app.post("/clients", async (req, res) => {
+  const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, ccNum, ccExp, addedBy } = req.body;
+  try {
+    const [result] = await pool.query(
+      `INSERT INTO People 
+      (First, Last, Address, City, ST, zip, \`Cell Phone\`, \`Permit #\`, \`Fee Charged\`, EmailAddr, Company, Status, CreditCardNum, CreditCardExpDate, AddedBy, AddedTS) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status || 'active', ccNum, ccExp, addedBy]
+    );
+    res.json({ success: true, id: result.insertId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put("/clients/:id", async (req, res) => {
+  const { id } = req.params;
+  const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, ccNum, ccExp } = req.body;
+  try {
+    await pool.query(
+      `UPDATE People SET 
+      First = ?, Last = ?, Address = ?, City = ?, ST = ?, zip = ?, \`Cell Phone\` = ?, 
+      \`Permit #\` = ?, \`Fee Charged\` = ?, EmailAddr = ?, Company = ?, Status = ?, 
+      CreditCardNum = ?, CreditCardExpDate = ? 
+      WHERE PeopleID = ?`,
+      [firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, ccNum, ccExp, id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- CARS (WITH OWNER JOIN) ---
 app.get("/cars", async (req, res) => {
   try {
-    const [rows] = await pool.query("SELECT * FROM Cars");
+    // JOIN with People to get owner names for the clickable links
+    const [rows] = await pool.query(`
+      SELECT c.*, p.First as ownerFirst, p.Last as ownerLast 
+      FROM Cars c 
+      LEFT JOIN People p ON c.Owner = p.PeopleID
+    `);
     
-    // Mapping messy SQL column names to clean JS keys for the frontend
     const formattedCars = rows.map(car => ({
       id: car['Car ID#'],
       make: car['Car Make'],
@@ -74,8 +116,9 @@ app.get("/cars", async (req, res) => {
       color: car.Color,
       year: car.Year,
       license_plate: car.License,
-      state: car['License State'],
-      owner_id: car.Owner
+      owner_id: car.Owner,
+      owner_first: car.ownerFirst,
+      owner_last: car.ownerLast
     }));
 
     res.json(formattedCars);
@@ -84,20 +127,16 @@ app.get("/cars", async (req, res) => {
   }
 });
 
-app.post("/cars", async (req, res) => {
-  const { make, model, color, year, license_plate, state, owner_id } = req.body;
+app.delete("/cars/:id", async (req, res) => {
   try {
-    const [result] = await pool.query(
-      "INSERT INTO Cars (`Car Make`, Model, Color, Year, License, `License State`, Owner) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [make, model, color, year, license_plate, state, owner_id]
-    );
-    res.json({ success: true, id: result.insertId });
-  } catch (err) { 
-    res.status(500).json({ error: err.message }); 
+    await pool.query("DELETE FROM Cars WHERE `Car ID#` = ?", [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-// --- PERMITS (Updated for 'DailyPermit' table) ---
+// --- PERMITS ---
 app.get("/permits", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM DailyPermit ORDER BY AddedTS DESC");
@@ -120,32 +159,24 @@ app.post("/permits", async (req, res) => {
   }
 });
 
-// --- PAYMENTS (Updated for your specific column names) ---
+// --- PAYMENTS ---
 app.get("/payments", async (req, res) => {
   try {
-    // Note: Use backticks for columns with spaces
     const [rows] = await pool.query("SELECT ID, Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy FROM Payments LIMIT 1000");
-    
     const formatted = rows.map(p => ({
       id: p.ID,
       payer: p.Payer,
       month: p['Payment Month'],
-      // Convert the varchar string "100.00" to a real number for the frontend
       amount: parseFloat(p['Payment Amount']) || 0, 
       created_at: p.AddedTS,
-      added_by: p.AddedBy,
-      is_paid: true 
+      added_by: p.AddedBy
     }));
-
     res.json(formatted);
   } catch (err) { 
-    console.error("Payments Query Error:", err.message);
     res.status(500).json({ error: "Failed to fetch payments" }); 
   }
 });
 
-// Start Server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`Connected to database: ${dbConfig.database}`);
 });

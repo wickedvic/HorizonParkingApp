@@ -4,9 +4,9 @@ import React, { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
 import {
   Box, Typography, Chip, List, ListItem, ListItemText, Divider,
-  ToggleButton, ToggleButtonGroup, Stack, Grid, Button, Paper, Link
+  ToggleButton, ToggleButtonGroup, Stack, Grid, Button, Paper, Link, Tooltip
 } from "@mui/material";
-import { DirectionsCar as CarIcon, Badge as PermitIcon, Add as AddIcon, Edit as EditIcon } from "@mui/icons-material";
+import { DirectionsCar as CarIcon, Badge as PermitIcon, Add as AddIcon, Edit as EditIcon, Info as InfoIcon } from "@mui/icons-material";
 import { MaterialReactTable } from 'material-react-table';
 
 export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, initialFilter }) {
@@ -38,8 +38,17 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   };
 
   const handleCreateClient = async ({ values, table }) => {
+    // Requirements: Auto-populate Permit and set default $120 fee if not provided
     const permitVal = values.permitNumber || `P-${Math.floor(1000 + Math.random() * 9000)}`;
-    const payload = { ...values, permitNumber: permitVal, addedBy: user?.username || 'Sys' };
+    const feeVal = values.feeCharged || "120";
+    
+    const payload = { 
+      ...values, 
+      permitNumber: permitVal, 
+      feeCharged: feeVal,
+      addedBy: user?.username || 'Sys' 
+    };
+
     try {
       const res = await fetch(`${API_BASE_URL}/clients`, {
         method: "POST",
@@ -70,12 +79,34 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     { accessorKey: "lastName", header: "Last Name", muiEditTextFieldProps: { required: true } },
     { accessorKey: "email", header: "Email Address" },
     { accessorKey: "phone", header: "Phone" },
-    { accessorKey: "permitNumber", header: "Permits", 
+    { 
+      accessorKey: "permitNumber", 
+      header: "Permit #", 
+      muiEditTextFieldProps: { 
+        helperText: "Permit numbers can be separated by a comma (e.g. 101, 102)",
+        placeholder: "Auto-generated if left blank"
+      },
       Cell: ({ cell }) => {
         const val = cell.getValue();
         if (!val) return 'N/A';
-        return val.toString().split(',').map((p, i) => <Chip key={i} label={p.trim()} size="small" sx={{ mr: 0.5 }} />);
+        return val.toString().split(',').map((p, i) => (
+          <Chip key={i} label={p.trim()} size="small" sx={{ mr: 0.5, mb: 0.5 }} variant="outlined" color="primary" />
+        ));
       }
+    },
+    { 
+      accessorKey: "feeCharged", 
+      header: "Permit Cost",
+      muiEditTextFieldProps: {
+        type: "number",
+        label: "Fee Charged ($)",
+        defaultValue: "120"
+      },
+      Cell: ({ cell }) => (
+        <Typography sx={{ fontWeight: 'bold', color: 'success.main' }}>
+          ${cell.getValue() || "0"}
+        </Typography>
+      )
     },
     { accessorKey: "company", header: "Company" },
     { accessorKey: "address", header: "Address" },
@@ -89,7 +120,12 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   return (
     <Box sx={{ p: 3 }}>
       <Stack direction="row" justifyContent="space-between" sx={{ mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Client Directory</Typography>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Client Directory</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Manage active residents, their vehicle associations, and permit billing.
+          </Typography>
+        </Box>
         <ToggleButtonGroup color="primary" value={statusFilter} exclusive onChange={(e, v) => v && setStatusFilter(v)} size="small">
           <ToggleButton value="active">Active</ToggleButton>
           <ToggleButton value="inactive">Inactive</ToggleButton>
@@ -106,10 +142,16 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         state={{ globalFilter }}
         onGlobalFilterChange={setGlobalFilter}
         renderTopToolbarCustomActions={({ table }) => (
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>Add Client</Button>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>
+            Add New Client
+          </Button>
         )}
         renderRowActions={({ row, table }) => (
-          <Button size="small" startIcon={<EditIcon />} onClick={() => table.setEditingRow(row)}>Edit</Button>
+          <Tooltip title="Edit Client Details">
+            <IconButton onClick={() => table.setEditingRow(row)}>
+              <EditIcon />
+            </IconButton>
+          </Tooltip>
         )}
         renderDetailPanel={({ row }) => {
           const clientVehicles = allCars.filter(car => car.owner_id == row.original.id);
@@ -122,14 +164,14 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
                     <CarIcon fontSize="small" color="primary" /> Registered Vehicles
                   </Typography>
                   <List sx={{ bgcolor: 'background.paper', borderRadius: 1, border: '1px solid #eee' }}>
-                    {clientVehicles.map((car) => (
+                    {clientVehicles.length > 0 ? clientVehicles.map((car) => (
                       <ListItem key={car.id}>
                         <ListItemText 
                           primary={<Link component="button" sx={{fontWeight:'bold'}} onClick={() => onNavigateCar(car.license_plate?.split('\r')[0])}>{car.make} {car.model}</Link>} 
                           secondary={`Plate: ${car.license_plate?.split('\r')[0]}`} 
                         />
                       </ListItem>
-                    ))}
+                    )) : <ListItem><ListItemText secondary="No vehicles registered" /></ListItem>}
                   </List>
                 </Grid>
                 <Grid item xs={12} md={6}>
@@ -137,14 +179,26 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
                     <PermitIcon fontSize="small" color="secondary" /> Permanent Permits
                   </Typography>
                   <List sx={{ bgcolor: 'background.paper', borderRadius: 1, border: '1px solid #eee' }}>
-                    {permitList.map((p, i) => <ListItem key={i}><ListItemText primary={`Permit #${p}`} /></ListItem>)}
+                    {permitList.length > 0 ? permitList.map((p, i) => (
+                      <ListItem key={i}><ListItemText primary={`Permit #${p}`} /></ListItem>
+                    )) : <ListItem><ListItemText secondary="No permanent permits assigned" /></ListItem>}
                   </List>
+                  <Paper variant="outlined" sx={{ p: 1.5, mt: 2, bgcolor: '#fffde7' }}>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <InfoIcon sx={{ color: '#fbc02d', fontSize: 20 }} />
+                      <Typography variant="caption">
+                        <strong>Billing Info:</strong> Current Fee Charged: ${row.original.feeCharged || "0"}.
+                      </Typography>
+                    </Stack>
+                  </Paper>
                 </Grid>
               </Grid>
             </Box>
           );
         }}
-        initialState={{ columnVisibility: { address: false, city: false, state: false, zip: false, ccNum: false, ccExp: false } }}
+        initialState={{ 
+          columnVisibility: { address: false, city: false, state: false, zip: false, ccNum: false, ccExp: false } 
+        }}
       />
     </Box>
   );
