@@ -4,9 +4,16 @@ import React, { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
 import {
   Box, Typography, Chip, List, ListItem, ListItemText, Divider,
-  ToggleButton, ToggleButtonGroup, Stack, Grid, Button, Paper, Link, Tooltip
+  ToggleButton, ToggleButtonGroup, Stack, Grid, Button, Paper, Link, Tooltip,
+  IconButton // <--- Added this missing import
 } from "@mui/material";
-import { DirectionsCar as CarIcon, Badge as PermitIcon, Add as AddIcon, Edit as EditIcon, Info as InfoIcon } from "@mui/icons-material";
+import { 
+  DirectionsCar as CarIcon, 
+  Badge as PermitIcon, 
+  Add as AddIcon, 
+  Edit as EditIcon, 
+  Info as InfoIcon 
+} from "@mui/icons-material";
 import { MaterialReactTable } from 'material-react-table';
 
 export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, initialFilter }) {
@@ -38,7 +45,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   };
 
   const handleCreateClient = async ({ values, table }) => {
-    // Requirements: Auto-populate Permit and set default $120 fee if not provided
     const permitVal = values.permitNumber || `P-${Math.floor(1000 + Math.random() * 9000)}`;
     const feeVal = values.feeCharged || "120";
     
