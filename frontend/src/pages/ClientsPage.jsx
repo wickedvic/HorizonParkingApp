@@ -17,18 +17,17 @@ import {
   Payments as CashIcon,
   History as HistoryIcon,
   LocalParking as ParkingIcon,
-  FileDownload as FileDownloadIcon // Added for CSV Export
+  FileDownload as FileDownloadIcon 
 } from "@mui/icons-material";
 import { MaterialReactTable } from 'material-react-table';
-import { mkConfig, generateCsv, download } from 'export-to-csv'; // Import CSV logic
+import { mkConfig, generateCsv, download } from 'export-to-csv'; 
 
 // --- CSV CONFIGURATION ---
-const csvConfig = mkConfig({
+const csvConfigBase = {
   fieldSeparator: ',',
   decimalSeparator: '.',
   useKeysAsHeaders: true,
-  filename: 'clients-export'
-});
+};
 
 export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, initialFilter }) {
   const [clients, setClients] = useState([]);
@@ -67,16 +66,18 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     } catch (err) { console.error(err); }
   }
 
-  // --- CSV EXPORT HANDLERS ---
-  const handleExportRows = (rows) => {
-    const rowData = rows.map((row) => row.original);
-    const csv = generateCsv(csvConfig)(rowData);
-    download(csvConfig)(csv);
+  // --- NEW: SIMPLIFIED CSV EXPORT HANDLERS ---
+  const handleExportByStatus = (status) => {
+    const filteredData = clients.filter(c => c.status?.toLowerCase() === status.toLowerCase());
+    const config = mkConfig({ ...csvConfigBase, filename: `${status}-clients-export` });
+    const csv = generateCsv(config)(filteredData);
+    download(config)(csv);
   };
 
-  const handleExportData = () => {
-    const csv = generateCsv(csvConfig)(clients);
-    download(csvConfig)(csv);
+  const handleExportAll = () => {
+    const config = mkConfig({ ...csvConfigBase, filename: 'all-clients-export' });
+    const csv = generateCsv(config)(clients);
+    download(config)(csv);
   };
 
   // --- PDF GENERATION LOGIC ---
@@ -285,7 +286,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         data={displayedClients}
         editDisplayMode="modal"
         enableEditing
-        enableRowSelection // Added to allow "Export Selected"
         onEditingRowSave={handleSaveClient}
         onCreatingRowSave={handleCreateClient}
         state={{ globalFilter }}
@@ -294,32 +294,32 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
           <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>Add Client</Button>
             
-            {/* CSV EXPORT BUTTONS */}
+            {/* SIMPLIFIED CSV EXPORT BUTTONS */}
             <Button 
                 startIcon={<FileDownloadIcon />} 
-                onClick={handleExportData}
+                onClick={() => handleExportByStatus('active')}
+                variant="outlined"
+                size="small"
+                color="success"
+            >
+                Export Active
+            </Button>
+            <Button 
+                startIcon={<FileDownloadIcon />} 
+                onClick={() => handleExportByStatus('inactive')}
+                variant="outlined"
+                size="small"
+                color="error"
+            >
+                Export Inactive
+            </Button>
+            <Button 
+                startIcon={<FileDownloadIcon />} 
+                onClick={handleExportAll}
                 variant="outlined"
                 size="small"
             >
                 Export All
-            </Button>
-            <Button
-              disabled={table.getPrePaginationRowModel().rows.length === 0}
-              onClick={() => handleExportRows(table.getPrePaginationRowModel().rows)}
-              startIcon={<FileDownloadIcon />}
-              variant="outlined"
-              size="small"
-            >
-              Export Rows
-            </Button>
-            <Button
-              disabled={!table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()}
-              onClick={() => handleExportRows(table.getSelectedRowModel().rows)}
-              startIcon={<FileDownloadIcon />}
-              variant="outlined"
-              size="small"
-            >
-              Export Selected
             </Button>
           </Box>
         )}
