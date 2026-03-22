@@ -13,7 +13,7 @@ import { MaterialReactTable } from 'material-react-table';
 
 export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   const [cars, setCars] = useState([]);
-  const [clients, setClients] = useState([]); // Added to populate owner dropdown
+  const [clients, setClients] = useState([]); 
   const [globalFilter, setGlobalFilter] = useState(initialFilter || "");
 
   useEffect(() => { 
@@ -100,11 +100,11 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         label: `${c.lastName}, ${c.firstName} (ID: ${c.id})`,
         value: c.id,
       })),
+      // FIX: Ensure the current owner is selected when editing
       muiEditTextFieldProps: ({ row }) => ({
         select: true,
-        defaultValue: row?.original?.owner_id,
+        value: row?.original?.owner_id || "", 
       }),
-      // Display the name in the table row
       accessorFn: (row) => `${row.owner_first || ''} ${row.owner_last || ''}`,
       id: "owner_name",
       Cell: ({ row, renderedCellValue }) => (

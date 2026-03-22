@@ -11,7 +11,9 @@ import {
   Search as SearchIcon,
   Person as PersonIcon,
   DirectionsCar as CarIcon,
-  Badge as PermitIcon
+  Badge as PermitIcon,
+  People as PeopleIcon,
+  AssignmentTurnedIn as VerifiedIcon
 } from "@mui/icons-material"
 import { 
   Paper, 
@@ -22,19 +24,18 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
-  Chip
+  Chip,
+  Stack
 } from "@mui/material"
 import "./Dashboard.css"
 
 export default function Dashboard({ user, onLogout }) {
   const [currentPage, setCurrentPage] = useState("dashboard")
-  const [stats, setStats] = useState({ clients: 0, cars: 0, permits: 0, payments: 0 })
+  const [stats, setStats] = useState({ activeClients: 0, activePermits: 0 })
   const [globalSearch, setGlobalSearch] = useState("") 
   
-  // Data for live quick-search
   const [rawData, setRawData] = useState({ clients: [], cars: [] })
 
-  // Navigation States
   const [initialClientFilter, setInitialClientFilter] = useState("")
   const [initialCarFilter, setInitialCarFilter] = useState("")
   const [permitFilter, setPermitFilter] = useState("")
@@ -45,28 +46,33 @@ export default function Dashboard({ user, onLogout }) {
 
   const loadStats = async () => {
     try {
-      const [clientsRes, carsRes, permitsRes, paymentsRes] = await Promise.all([
+      const [clientsRes, carsRes, permitsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/clients`),
         fetch(`${API_BASE_URL}/cars`),
         fetch(`${API_BASE_URL}/permits`),
-        fetch(`${API_BASE_URL}/payments`),
       ])
       const clients = await clientsRes.json()
       const cars = await carsRes.json()
       const permits = await permitsRes.json()
-      const payments = await paymentsRes.json()
+
+      // Calculate Active counts
+      const activeClientsCount = Array.isArray(clients) 
+        ? clients.filter(c => c.status?.toLowerCase() === 'active').length 
+        : 0;
+      
+      const today = new Date().toISOString().split('T')[0];
+      const activePermitsCount = Array.isArray(permits)
+        ? permits.filter(p => p.PermitEndDate >= today).length
+        : 0;
 
       setRawData({ clients: Array.isArray(clients) ? clients : [], cars: Array.isArray(cars) ? cars : [] })
       setStats({
-        clients: Array.isArray(clients) ? clients.length : 0,
-        cars: Array.isArray(cars) ? cars.length : 0,
-        permits: Array.isArray(permits) ? permits.length : 0,
-        payments: Array.isArray(payments) ? payments.length : 0,
+        activeClients: activeClientsCount,
+        activePermits: activePermitsCount,
       })
     } catch (err) { console.error("Stats load failed:", err) }
   }
 
-  // --- QUICK SEARCH LOGIC ---
   const quickSearchResults = useMemo(() => {
     if (globalSearch.length < 2) return { clients: [], cars: [] };
     const query = globalSearch.toLowerCase();
@@ -75,7 +81,7 @@ export default function Dashboard({ user, onLogout }) {
       c.firstName?.toLowerCase().includes(query) || 
       c.lastName?.toLowerCase().includes(query) || 
       c.permitNumber?.toLowerCase().includes(query)
-    ).slice(0, 5); // Limit to top 5
+    ).slice(0, 5);
 
     const filteredCars = rawData.cars.filter(car => 
       car.license_plate?.toLowerCase().includes(query) ||
@@ -89,8 +95,6 @@ export default function Dashboard({ user, onLogout }) {
     e.preventDefault();
     if (!globalSearch.trim()) return;
     const query = globalSearch.trim();
-    
-    // FIX: Check if it starts with P- for Permits first
     const isPermit = query.toUpperCase().startsWith('P-');
     const looksLikePlate = /[A-Z0-9]{3,}/.test(query) && query.length <= 8;
 
@@ -105,31 +109,19 @@ export default function Dashboard({ user, onLogout }) {
   };
 
   const handleNavigateToClients = (ownerId) => {
-    setInitialClientFilter(ownerId)
-    setInitialCarFilter("")
-    setPermitFilter("")
-    setCurrentPage("clients")
+    setInitialClientFilter(ownerId); setInitialCarFilter(""); setPermitFilter(""); setCurrentPage("clients");
   }
 
   const handleNavigateToCars = (plate) => {
-    setInitialCarFilter(plate)
-    setInitialClientFilter("")
-    setPermitFilter("")
-    setCurrentPage("cars")
+    setInitialCarFilter(plate); setInitialClientFilter(""); setPermitFilter(""); setCurrentPage("cars");
   }
 
   const handleNavigateToPermits = (num) => {
-    setPermitFilter(num)
-    setInitialCarFilter("")
-    setInitialClientFilter("")
-    setCurrentPage("permits")
+    setPermitFilter(num); setInitialCarFilter(""); setInitialClientFilter(""); setCurrentPage("permits");
   }
 
   const navTo = (page) => {
-    setInitialClientFilter("")
-    setInitialCarFilter("")
-    setPermitFilter("")
-    setCurrentPage(page)
+    setInitialClientFilter(""); setInitialCarFilter(""); setPermitFilter(""); setCurrentPage(page);
   }
 
   return (
@@ -153,28 +145,61 @@ export default function Dashboard({ user, onLogout }) {
           <div className="animate-fade-in">
             <h2 className="page-title">Dashboard Overview</h2>
             
-            <Paper elevation={0} sx={{ p: '20px', mb: '30px', borderRadius: '12px', border: '1px solid #e0e0e0', background: '#fff', position: 'relative' }}>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>Quick System Check</Typography>
-                <form onSubmit={handleGlobalSearchSubmit} style={{ display: 'flex', gap: '10px' }}>
-                    <div style={{ position: 'relative', flexGrow: 1 }}>
-                        <SearchIcon sx={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#95a5a6' }} />
+            <Paper elevation={0} sx={{ p: '24px', mb: '30px', borderRadius: '16px', border: '1px solid #eef2f6', background: '#fff', position: 'relative', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+                <Typography variant="h6" sx={{ mb: 3, fontWeight: 700, color: '#1a2027' }}>Quick System Check</Typography>
+                
+                {/* --- NEW STATS SECTION --- */}
+                <Stack direction="row" spacing={4} sx={{ mb: 4 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(25, 118, 210, 0.08)' }}>
+                            <PeopleIcon color="primary" />
+                        </Box>
+                        <Box>
+                            <Typography variant="h4" sx={{ fontWeight: 800, color: '#1976d2', lineHeight: 1 }}>{stats.activeClients}</Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.5 }}>Total Active Clients</Typography>
+                        </Box>
+                    </Box>
+                    <Divider orientation="vertical" flexItem />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(46, 125, 50, 0.08)' }}>
+                            <VerifiedIcon color="success" />
+                        </Box>
+                        <Box>
+                            <Typography variant="h4" sx={{ fontWeight: 800, color: '#2e7d32', lineHeight: 1 }}>{stats.activePermits}</Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.5 }}>Active Temp Permits</Typography>
+                        </Box>
+                    </Box>
+                </Stack>
+
+                <form onSubmit={handleGlobalSearchSubmit}>
+                    <div style={{ position: 'relative' }}>
+                        <SearchIcon sx={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                         <input 
                             type="text"
-                            placeholder="Type a name, plate, or permit..."
+                            placeholder="Check name, license plate, or permit #..."
                             value={globalSearch}
                             onChange={(e) => setGlobalSearch(e.target.value)}
-                            style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '8px', border: '1px solid #ced4da', fontSize: '16px', outline: 'none' }}
+                            style={{ 
+                                width: '100%', 
+                                padding: '16px 16px 16px 48px', 
+                                borderRadius: '12px', 
+                                border: '2px solid #f1f5f9', 
+                                background: '#f8fafc',
+                                fontSize: '16px', 
+                                fontWeight: 500,
+                                outline: 'none',
+                                transition: 'all 0.2s'
+                            }}
                         />
                     </div>
                 </form>
 
-                {/* --- LIVE RESULTS DROPDOWN --- */}
                 {globalSearch.length >= 2 && (
-                    <Paper elevation={4} sx={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, mt: 1, maxHeight: '400px', overflowY: 'auto', borderRadius: '8px' }}>
-                        <List subheader={<li />}>
+                    <Paper elevation={8} sx={{ position: 'absolute', top: '100%', left: '24px', right: '24px', zIndex: 10, mt: 1, maxHeight: '400px', overflowY: 'auto', borderRadius: '12px', border: '1px solid #eef2f6' }}>
+                        <List>
                             {quickSearchResults.clients.length > 0 && (
                                 <>
-                                    <Typography variant="overline" sx={{ px: 2, fontWeight: 'bold', color: 'primary.main' }}>Matching Clients</Typography>
+                                    <Typography variant="overline" sx={{ px: 2, pt: 1, display: 'block', fontWeight: 800, color: 'primary.main' }}>Matching Clients</Typography>
                                     {quickSearchResults.clients.map(c => (
                                         <ListItem key={c.id} button onClick={() => handleNavigateToClients(c.lastName)}>
                                             <ListItemIcon><PersonIcon color="primary" /></ListItemIcon>
@@ -187,7 +212,7 @@ export default function Dashboard({ user, onLogout }) {
                             )}
                             {quickSearchResults.cars.length > 0 && (
                                 <>
-                                    <Typography variant="overline" sx={{ px: 2, fontWeight: 'bold', color: 'warning.main' }}>Matching Vehicles</Typography>
+                                    <Typography variant="overline" sx={{ px: 2, pt: 1, display: 'block', fontWeight: 800, color: 'warning.main' }}>Matching Vehicles</Typography>
                                     {quickSearchResults.cars.map(car => (
                                         <ListItem key={car.id} button onClick={() => handleNavigateToCars(car.license_plate)}>
                                             <ListItemIcon><CarIcon color="warning" /></ListItemIcon>
@@ -197,24 +222,13 @@ export default function Dashboard({ user, onLogout }) {
                                     ))}
                                 </>
                             )}
-                            {quickSearchResults.clients.length === 0 && quickSearchResults.cars.length === 0 && (
-                                <ListItem><ListItemText primary="No matches found in the system." /></ListItem>
-                            )}
                         </List>
                     </Paper>
                 )}
             </Paper>
-
-            <div className="stats-grid">
-              <div className="stat-card info"><h3>Total Clients</h3><p className="stat-number">{stats.clients}</p></div>
-              <div className="stat-card warning"><h3>Total Vehicles</h3><p className="stat-number">{stats.cars}</p></div>
-              <div className="stat-card success"><h3>Permit Records</h3><p className="stat-number">{stats.permits}</p></div>
-              <div className="stat-card primary"><h3>Payment Records</h3><p className="stat-number">{stats.payments}</p></div>
-            </div>
           </div>
         )}
         
-        {/* ... (rest of the pages remain same) */}
         {currentPage === "clients" && <ClientsPage user={user} initialFilter={initialClientFilter} onNavigateCar={handleNavigateToCars} onNavigatePermit={handleNavigateToPermits} />}
         {currentPage === "cars" && <CarsPage user={user} initialFilter={initialCarFilter} onNavigateClient={handleNavigateToClients} />}
         {currentPage === "permits" && <PermitsPage user={user} initialFilter={permitFilter} />}
