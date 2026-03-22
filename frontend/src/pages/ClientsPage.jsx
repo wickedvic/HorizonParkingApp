@@ -66,7 +66,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     } catch (err) { console.error(err); }
   }
 
-  // --- NEW: SIMPLIFIED CSV EXPORT HANDLERS ---
   const handleExportByStatus = (status) => {
     const filteredData = clients.filter(c => c.status?.toLowerCase() === status.toLowerCase());
     const config = mkConfig({ ...csvConfigBase, filename: `${status}-clients-export` });
@@ -245,6 +244,21 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     { accessorKey: "firstName", header: "First Name", muiEditTextFieldProps: { required: true } },
     { accessorKey: "lastName", header: "Last Name", muiEditTextFieldProps: { required: true } },
     { 
+        accessorKey: "type", 
+        header: "Type", 
+        editVariant: 'select', 
+        editSelectOptions: [
+          { label: 'Tenant', value: 'Tenant' }, 
+          { label: 'Employee', value: 'Employee' },
+          { label: 'Payer', value: 'Payer' }
+        ],
+        muiEditTextFieldProps: ({ row }) => ({
+          select: true,
+          defaultValue: row?.original?.type || 'Tenant', 
+        }),
+        Cell: ({ cell }) => <Chip label={cell.getValue()} variant="outlined" size="small" />
+    },
+    { 
       accessorKey: "status", 
       header: "Status", 
       editVariant: 'select', 
@@ -293,34 +307,9 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         renderTopToolbarCustomActions={({ table }) => (
           <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>Add Client</Button>
-            
-            {/* SIMPLIFIED CSV EXPORT BUTTONS */}
-            <Button 
-                startIcon={<FileDownloadIcon />} 
-                onClick={() => handleExportByStatus('active')}
-                variant="outlined"
-                size="small"
-                color="success"
-            >
-                Export Active
-            </Button>
-            <Button 
-                startIcon={<FileDownloadIcon />} 
-                onClick={() => handleExportByStatus('inactive')}
-                variant="outlined"
-                size="small"
-                color="error"
-            >
-                Export Inactive
-            </Button>
-            <Button 
-                startIcon={<FileDownloadIcon />} 
-                onClick={handleExportAll}
-                variant="outlined"
-                size="small"
-            >
-                Export All
-            </Button>
+            <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
+            <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
+            <Button startIcon={<FileDownloadIcon />} onClick={handleExportAll} variant="outlined" size="small">Export All</Button>
           </Box>
         )}
         renderRowActions={({ row, table }) => (
