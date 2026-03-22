@@ -6,11 +6,9 @@ const mysql = require("mysql2/promise");
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// MySQL Connection Pool
 const dbConfig = {
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
@@ -37,11 +35,10 @@ app.post("/auth/login", async (req, res) => {
   }
 });
 
-// --- CLIENTS (PEOPLE TABLE) ---
+// --- CLIENTS ---
 app.get("/clients", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM People ORDER BY Last ASC");
-    
     const formattedPeople = rows.map(person => ({
       id: person.PeopleID,
       firstName: person.First,
@@ -57,9 +54,10 @@ app.get("/clients", async (req, res) => {
       company: person.Company,
       status: person.Status,
       ccNum: person.CreditCardNum,
-      ccExp: person.CreditCardExpDate
+      ccExp: person.CreditCardExpDate,
+      paymentType: person['Payment Type'],
+      type: person['Client Type']
     }));
-
     res.json(formattedPeople);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -99,16 +97,14 @@ app.put("/clients/:id", async (req, res) => {
   }
 });
 
-// --- CARS (WITH OWNER JOIN) ---
+// --- CARS ---
 app.get("/cars", async (req, res) => {
   try {
-    // JOIN with People to get owner names for the clickable links
     const [rows] = await pool.query(`
       SELECT c.*, p.First as ownerFirst, p.Last as ownerLast 
       FROM Cars c 
       LEFT JOIN People p ON c.Owner = p.PeopleID
     `);
-    
     const formattedCars = rows.map(car => ({
       id: car['Car ID#'],
       make: car['Car Make'],
@@ -120,30 +116,65 @@ app.get("/cars", async (req, res) => {
       owner_first: car.ownerFirst,
       owner_last: car.ownerLast
     }));
-
     res.json(formattedCars);
-  } catch (err) { 
-    res.status(500).json({ error: err.message }); 
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.delete("/cars/:id", async (req, res) => {
   try {
     await pool.query("DELETE FROM Cars WHERE `Car ID#` = ?", [req.params.id]);
     res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- MASS PAYMENTS LOGIC ---
+
+// Get log to check for duplicates
+app.get("/mass-payments-log", async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT * FROM MassPaymentsLog ORDER BY DateProcessed DESC");
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Atomic transaction to process everyone at once
+app.post("/process-mass-payment", async (req, res) => {
+  const { month, clients, addedBy } = req.body;
+  const connection = await pool.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+
+    // 1. Insert into MassPaymentsLog
+    await connection.query(
+      "INSERT INTO MassPaymentsLog (MonthProcessed, DateProcessed, AddedBy) VALUES (?, NOW(), ?)",
+      [month, addedBy || 'Admin']
+    );
+
+    // 2. Insert into Payments for every active client
+    for (const client of clients) {
+      await connection.query(
+        "INSERT INTO Payments (Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy) VALUES (?, ?, ?, NOW(), ?)",
+        [client.id, month, client.feeCharged || "120", addedBy || 'Admin']
+      );
+    }
+
+    await connection.commit();
+    res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    await connection.rollback();
+    res.status(500).json({ error: "Failed to process mass payment: " + err.message });
+  } finally {
+    connection.release();
   }
 });
 
-// --- PERMITS ---
+// --- DAILY PERMITS (Temporary) ---
 app.get("/permits", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM DailyPermit ORDER BY AddedTS DESC");
     res.json(rows);
-  } catch (err) { 
-    res.status(500).json({ error: err.message }); 
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post("/permits", async (req, res) => {
@@ -154,15 +185,13 @@ app.post("/permits", async (req, res) => {
       [user_name, start_date, end_date, added_by]
     );
     res.json({ id: result.insertId, ...req.body });
-  } catch (err) { 
-    res.status(500).json({ error: err.message }); 
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- PAYMENTS ---
+// --- PAYMENTS (Individual/Historical) ---
 app.get("/payments", async (req, res) => {
   try {
-    const [rows] = await pool.query("SELECT ID, Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy FROM Payments LIMIT 1000");
+    const [rows] = await pool.query("SELECT * FROM Payments ORDER BY AddedTS DESC");
     const formatted = rows.map(p => ({
       id: p.ID,
       payer: p.Payer,
@@ -172,9 +201,7 @@ app.get("/payments", async (req, res) => {
       added_by: p.AddedBy
     }));
     res.json(formatted);
-  } catch (err) { 
-    res.status(500).json({ error: "Failed to fetch payments" }); 
-  }
+  } catch (err) { res.status(500).json({ error: "Failed to fetch payments" }); }
 });
 
 app.listen(PORT, () => {
