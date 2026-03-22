@@ -16,9 +16,19 @@ import {
   PictureAsPdf as PdfIcon,
   Payments as CashIcon,
   History as HistoryIcon,
-  LocalParking as ParkingIcon
+  LocalParking as ParkingIcon,
+  FileDownload as FileDownloadIcon // Added for CSV Export
 } from "@mui/icons-material";
 import { MaterialReactTable } from 'material-react-table';
+import { mkConfig, generateCsv, download } from 'export-to-csv'; // Import CSV logic
+
+// --- CSV CONFIGURATION ---
+const csvConfig = mkConfig({
+  fieldSeparator: ',',
+  decimalSeparator: '.',
+  useKeysAsHeaders: true,
+  filename: 'clients-export'
+});
 
 export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, initialFilter }) {
   const [clients, setClients] = useState([]);
@@ -57,11 +67,22 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     } catch (err) { console.error(err); }
   }
 
-  // --- PDF 1: PARKING PERMIT ---
+  // --- CSV EXPORT HANDLERS ---
+  const handleExportRows = (rows) => {
+    const rowData = rows.map((row) => row.original);
+    const csv = generateCsv(csvConfig)(rowData);
+    download(csvConfig)(csv);
+  };
+
+  const handleExportData = () => {
+    const csv = generateCsv(csvConfig)(clients);
+    download(csvConfig)(csv);
+  };
+
+  // --- PDF GENERATION LOGIC ---
   const handlePrintPermit = (client) => {
     const clientVehicles = allCars.filter(car => car.owner_id == client.id);
     const monthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-    
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
       <html>
@@ -102,13 +123,10 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     printWindow.document.close();
   };
 
-  // --- PDF 2: PAYMENT RECEIPT ---
   const handlePrintReceipt = (client) => {
     const defaultMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
     const selectedMonth = window.prompt("Enter the Effective Month/Year for this receipt:", defaultMonth);
-    
     if (selectedMonth === null) return; 
-
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
       <html>
@@ -142,14 +160,12 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     printWindow.document.close();
   };
 
-  // --- PDF 3: PAYMENT HISTORY ---
   const handlePrintHistory = (client) => {
     const clientPayments = payments.filter(p => p.payer == client.id);
     const mid = Math.ceil(clientPayments.length / 2);
     const leftCol = clientPayments.slice(0, mid);
     const rightCol = clientPayments.slice(mid);
     const printWindow = window.open('', '_blank');
-
     printWindow.document.write(`
       <html>
         <head>
@@ -235,7 +251,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         { label: 'Active', value: 'active' }, 
         { label: 'Inactive', value: 'inactive' }
       ],
-      // FIX: This ensures the dropdown pre-populates with the row's current status
       muiEditTextFieldProps: ({ row }) => ({
         select: true,
         defaultValue: row?.original?.status, 
@@ -270,11 +285,44 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         data={displayedClients}
         editDisplayMode="modal"
         enableEditing
+        enableRowSelection // Added to allow "Export Selected"
         onEditingRowSave={handleSaveClient}
         onCreatingRowSave={handleCreateClient}
         state={{ globalFilter }}
         onGlobalFilterChange={setGlobalFilter}
-        renderTopToolbarCustomActions={({ table }) => (<Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>Add Client</Button>)}
+        renderTopToolbarCustomActions={({ table }) => (
+          <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>Add Client</Button>
+            
+            {/* CSV EXPORT BUTTONS */}
+            <Button 
+                startIcon={<FileDownloadIcon />} 
+                onClick={handleExportData}
+                variant="outlined"
+                size="small"
+            >
+                Export All
+            </Button>
+            <Button
+              disabled={table.getPrePaginationRowModel().rows.length === 0}
+              onClick={() => handleExportRows(table.getPrePaginationRowModel().rows)}
+              startIcon={<FileDownloadIcon />}
+              variant="outlined"
+              size="small"
+            >
+              Export Rows
+            </Button>
+            <Button
+              disabled={!table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()}
+              onClick={() => handleExportRows(table.getSelectedRowModel().rows)}
+              startIcon={<FileDownloadIcon />}
+              variant="outlined"
+              size="small"
+            >
+              Export Selected
+            </Button>
+          </Box>
+        )}
         renderRowActions={({ row, table }) => (
           <Stack direction="row" spacing={0.5}>
             <Tooltip title="Parking Permit"><IconButton onClick={() => handlePrintPermit(row.original)} color="error"><ParkingIcon /></IconButton></Tooltip>
