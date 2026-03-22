@@ -5,14 +5,15 @@ import API_BASE_URL from "../api.js"
 import {
   Box, Typography, Chip, List, ListItem, ListItemText, Divider,
   ToggleButton, ToggleButtonGroup, Stack, Grid, Button, Paper, Link, Tooltip,
-  IconButton // <--- Added this missing import
+  IconButton
 } from "@mui/material";
 import { 
   DirectionsCar as CarIcon, 
   Badge as PermitIcon, 
   Add as AddIcon, 
   Edit as EditIcon, 
-  Info as InfoIcon 
+  Info as InfoIcon,
+  PictureAsPdf as PdfIcon // Added for PDF/Print functionality
 } from "@mui/icons-material";
 import { MaterialReactTable } from 'material-react-table';
 
@@ -45,6 +46,81 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     } catch (err) { console.error(err); }
   };
 
+  // Function to handle the Permit Printing (PDF-like view)
+  const handlePrintPermit = (client) => {
+    const clientVehicles = allCars.filter(car => car.owner_id == client.id);
+    const monthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Parking Permit - ${client.firstName} ${client.lastName}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 40px; text-align: center; }
+            .header { border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; }
+            .logo-placeholder { background: #444; color: white; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-weight: bold; }
+            h1 { font-size: 48px; color: #d32f2f; margin: 20px 0; }
+            .address { font-size: 18px; margin-bottom: 30px; }
+            .permit-label { font-size: 32px; font-weight: bold; text-decoration: underline; margin-bottom: 10px; }
+            .date-highlight { font-size: 56px; color: #d32f2f; font-weight: bold; margin: 20px 0; }
+            .cars-info-title { text-align: left; font-size: 20px; font-weight: bold; text-decoration: underline; margin-top: 40px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid black; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .signature-line { margin-top: 60px; text-align: right; }
+            .footer-info { margin-top: 40px; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="logo-placeholder">H</div>
+            <div style="font-size: 28px; font-weight: bold;">2020 Partners, LLC</div>
+          </div>
+          <h1>Parking Permit</h1>
+          <div class="address">20 Jerusalem Ave<br/>Hicksville, NY</div>
+          <div class="permit-label">Permit #: ${client.permitNumber || 'N/A'}</div>
+          <div class="date-highlight">${monthYear}</div>
+          
+          <div class="cars-info-title">Cars Info</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Car Make</th>
+                <th>Model</th>
+                <th>Color</th>
+                <th>Year</th>
+                <th>License</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${clientVehicles.map(car => `
+                <tr>
+                  <td>${car.make || ''}</td>
+                  <td>${car.model || ''}</td>
+                  <td>${car.color || ''}</td>
+                  <td>${car.year || ''}</td>
+                  <td>${car.license_plate?.split('\r')[0] || ''}</td>
+                </tr>
+              `).join('')}
+              ${clientVehicles.length === 0 ? '<tr><td colspan="5" style="text-align:center;">No vehicles registered</td></tr>' : ''}
+            </tbody>
+          </table>
+          
+          <div class="signature-line">
+            X __________________________________________
+          </div>
+          
+          <div class="footer-info">
+            Feel free to call with any questions: Phone: 516-328-2020
+          </div>
+          <script>window.print();</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   const handleCreateClient = async ({ values, table }) => {
     const permitVal = values.permitNumber || `P-${Math.floor(1000 + Math.random() * 9000)}`;
     const feeVal = values.feeCharged || "120";
@@ -53,6 +129,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       ...values, 
       permitNumber: permitVal, 
       feeCharged: feeVal,
+      status: values.status || 'active', // Ensure status is sent
       addedBy: user?.username || 'Sys' 
     };
 
@@ -86,6 +163,22 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     { accessorKey: "lastName", header: "Last Name", muiEditTextFieldProps: { required: true } },
     { accessorKey: "email", header: "Email Address" },
     { accessorKey: "phone", header: "Phone" },
+    { 
+      accessorKey: "status", 
+      header: "Status",
+      editVariant: 'select',
+      editSelectOptions: [
+        { label: 'Active', value: 'active' },
+        { label: 'Inactive', value: 'inactive' },
+      ],
+      Cell: ({ cell }) => (
+        <Chip 
+          label={cell.getValue()?.toUpperCase()} 
+          color={cell.getValue() === 'active' ? 'success' : 'default'} 
+          size="small" 
+        />
+      )
+    },
     { 
       accessorKey: "permitNumber", 
       header: "Permit #", 
@@ -154,11 +247,18 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
           </Button>
         )}
         renderRowActions={({ row, table }) => (
-          <Tooltip title="Edit Client Details">
-            <IconButton onClick={() => table.setEditingRow(row)}>
-              <EditIcon />
-            </IconButton>
-          </Tooltip>
+          <Stack direction="row" spacing={1}>
+            <Tooltip title="Print Permit (PDF)">
+              <IconButton onClick={() => handlePrintPermit(row.original)} color="primary">
+                <PdfIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Edit Client Details">
+              <IconButton onClick={() => table.setEditingRow(row)}>
+                <EditIcon />
+              </IconButton>
+            </Tooltip>
+          </Stack>
         )}
         renderDetailPanel={({ row }) => {
           const clientVehicles = allCars.filter(car => car.owner_id == row.original.id);
