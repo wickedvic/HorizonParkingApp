@@ -2,18 +2,31 @@
 
 import React, { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
-import { Box, Tooltip, IconButton, Typography, Chip, Link, Button } from "@mui/material";
+import { 
+  Box, Tooltip, IconButton, Typography, Chip, Link, Button, 
+  Stack, ToggleButton, ToggleButtonGroup 
+} from "@mui/material";
 import { 
   Delete as DeleteIcon, 
   Person as PersonIcon, 
   Add as AddIcon, 
-  Edit as EditIcon 
+  Edit as EditIcon,
+  FileDownload as FileDownloadIcon
 } from "@mui/icons-material";
 import { MaterialReactTable } from 'material-react-table';
+import { mkConfig, generateCsv, download } from 'export-to-csv';
+
+// --- CSV CONFIGURATION ---
+const csvConfigBase = {
+  fieldSeparator: ',',
+  decimalSeparator: '.',
+  useKeysAsHeaders: true,
+};
 
 export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   const [cars, setCars] = useState([]);
   const [clients, setClients] = useState([]); 
+  const [statusFilter, setStatusFilter] = useState("active"); // Tab state
   const [globalFilter, setGlobalFilter] = useState(initialFilter || "");
 
   useEffect(() => { 
@@ -37,6 +50,23 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       const data = await res.json();
       setClients(Array.isArray(data) ? data : []);
     } catch (err) { console.error("Failed to load clients:", err); }
+  };
+
+  // --- CSV EXPORT HANDLERS ---
+  const handleExportByStatus = (status) => {
+    const filteredData = displayedCars.filter(car => {
+      const owner = clients.find(c => c.id === car.owner_id);
+      return (owner?.status?.toLowerCase() || 'inactive') === status.toLowerCase();
+    });
+    const config = mkConfig({ ...csvConfigBase, filename: `${status}-vehicles-export` });
+    const csv = generateCsv(config)(filteredData);
+    download(config)(csv);
+  };
+
+  const handleExportAll = () => {
+    const config = mkConfig({ ...csvConfigBase, filename: 'all-vehicles-export' });
+    const csv = generateCsv(config)(cars);
+    download(config)(csv);
   };
 
   const handleCreateCar = async ({ values, table }) => {
@@ -76,6 +106,15 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
     }
   };
 
+  // Filter cars based on the Owner's status
+  const displayedCars = useMemo(() => {
+    return cars.filter(car => {
+      const owner = clients.find(c => c.id === car.owner_id);
+      const ownerStatus = owner?.status?.toLowerCase() || "inactive";
+      return ownerStatus === statusFilter.toLowerCase();
+    });
+  }, [cars, clients, statusFilter]);
+
   const columns = useMemo(() => [
     { accessorKey: "id", header: "ID", enableEditing: false, size: 80 },
     { 
@@ -100,7 +139,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         label: `${c.lastName}, ${c.firstName} (ID: ${c.id})`,
         value: c.id,
       })),
-      // FIX: Ensure the current owner is selected when editing
       muiEditTextFieldProps: ({ row }) => ({
         select: true,
         value: row?.original?.owner_id || "", 
@@ -125,13 +163,25 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold', color: '#2c3e50' }}>
-        Vehicle Inventory
-      </Typography>
+      <Stack direction="row" justifyContent="space-between" sx={{ mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#2c3e50' }}>
+          Vehicle Inventory
+        </Typography>
+        <ToggleButtonGroup 
+          color="primary" 
+          value={statusFilter} 
+          exclusive 
+          onChange={(e, v) => v && setStatusFilter(v)} 
+          size="small"
+        >
+          <ToggleButton value="active">Active Owners</ToggleButton>
+          <ToggleButton value="inactive">Inactive Owners</ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
       
       <MaterialReactTable 
         columns={columns} 
-        data={cars} 
+        data={displayedCars} 
         editDisplayMode="modal"
         enableEditing
         onEditingRowSave={handleSaveCar}
@@ -139,9 +189,14 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         state={{ globalFilter }} 
         onGlobalFilterChange={setGlobalFilter}
         renderTopToolbarCustomActions={({ table }) => (
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>
-            Add New Vehicle
-          </Button>
+          <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>
+              Add New Vehicle
+            </Button>
+            <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
+            <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
+            <Button startIcon={<FileDownloadIcon />} onClick={handleExportAll} variant="outlined" size="small">Export All</Button>
+          </Box>
         )}
         renderRowActions={({ row, table }) => (
           <Box sx={{ display: 'flex', gap: '0.5rem' }}>
