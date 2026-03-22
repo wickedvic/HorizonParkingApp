@@ -107,7 +107,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     const defaultMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
     const selectedMonth = window.prompt("Enter the Effective Month/Year for this receipt:", defaultMonth);
     
-    if (selectedMonth === null) return; // User cancelled
+    if (selectedMonth === null) return; 
 
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
@@ -227,8 +227,26 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     { accessorKey: "id", header: "ID", enableEditing: false, size: 80 },
     { accessorKey: "firstName", header: "First Name", muiEditTextFieldProps: { required: true } },
     { accessorKey: "lastName", header: "Last Name", muiEditTextFieldProps: { required: true } },
-    { accessorKey: "status", header: "Status", editVariant: 'select', editSelectOptions: [{ label: 'Active', value: 'active' }, { label: 'Inactive', value: 'inactive' }],
-      Cell: ({ cell }) => <Chip label={cell.getValue()?.toUpperCase()} color={cell.getValue() === 'active' ? 'success' : 'default'} size="small" />
+    { 
+      accessorKey: "status", 
+      header: "Status", 
+      editVariant: 'select', 
+      editSelectOptions: [
+        { label: 'Active', value: 'active' }, 
+        { label: 'Inactive', value: 'inactive' }
+      ],
+      // This ensures the current value is pre-selected in the modal
+      muiEditTextFieldProps: ({ row }) => ({
+        select: true,
+        defaultValue: row?.original?.status || 'active',
+      }),
+      Cell: ({ cell }) => (
+        <Chip 
+          label={cell.getValue()?.toUpperCase()} 
+          color={cell.getValue() === 'active' ? 'success' : 'default'} 
+          size="small" 
+        />
+      )
     },
     { accessorKey: "permitNumber", header: "Permit #", Cell: ({ cell }) => cell.getValue() ? cell.getValue().split(',').map((p, i) => <Chip key={i} label={p.trim()} size="small" sx={{ mr: 0.5 }} variant="outlined" color="primary" />) : 'N/A' },
     { accessorKey: "feeCharged", header: "Cost", Cell: ({ cell }) => <Typography sx={{ fontWeight: 'bold', color: 'success.main' }}>${cell.getValue() || "0"}</Typography> },
