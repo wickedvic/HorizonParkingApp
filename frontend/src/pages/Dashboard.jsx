@@ -7,13 +7,23 @@ import PermitsPage from "./PermitsPage"
 import PaymentsPage from "./PaymentsPage"
 import ReportsPage from "./ReportsPage"
 import CarsPage from "./CarsPage"
-import { Search as SearchIcon } from "@mui/icons-material" // Added for the search bar
+import { 
+  Search as SearchIcon 
+} from "@mui/icons-material"
+import { 
+  Paper, 
+  Typography, 
+  Box, 
+  Stack, 
+  ToggleButton, 
+  ToggleButtonGroup 
+} from "@mui/material" // <-- Added Paper and other required MUI components here
 import "./Dashboard.css"
 
 export default function Dashboard({ user, onLogout }) {
   const [currentPage, setCurrentPage] = useState("dashboard")
   const [stats, setStats] = useState({ clients: 0, cars: 0, permits: 0, payments: 0 })
-  const [globalSearch, setGlobalSearch] = useState("") // New state for search input
+  const [globalSearch, setGlobalSearch] = useState("") 
   
   // Navigation States
   const [initialClientFilter, setInitialClientFilter] = useState("")
@@ -46,17 +56,11 @@ export default function Dashboard({ user, onLogout }) {
     } catch (err) { console.error("Stats load failed:", err) }
   }
 
-  // --- NEW: GLOBAL SEARCH HANDLER ---
   const handleGlobalSearch = (e) => {
     e.preventDefault();
     if (!globalSearch.trim()) return;
 
     const query = globalSearch.trim();
-
-    // Logic to triage search:
-    // 1. If it has a hyphen or looks like a standard plate format (e.g., ABC-1234), go to Cars
-    // 2. Otherwise, check against Clients (Names or Permit #)
-    // We can prioritize Clients as the default broad search
     
     // Check if it's likely a license plate (common pattern check)
     const looksLikePlate = /[A-Z0-9]{3,}/.test(query) && query.length <= 8;
@@ -66,7 +70,7 @@ export default function Dashboard({ user, onLogout }) {
     } else {
         handleNavigateToClients(query);
     }
-    setGlobalSearch(""); // Reset search bar after navigating
+    setGlobalSearch(""); 
   };
 
   const handleNavigateToClients = (ownerId) => {
@@ -118,7 +122,6 @@ export default function Dashboard({ user, onLogout }) {
           <div className="animate-fade-in">
             <h2 className="page-title">Dashboard Overview</h2>
             
-            {/* --- NEW: GLOBAL SEARCH SECTION --- */}
             <Paper 
                 elevation={0} 
                 sx={{ 
