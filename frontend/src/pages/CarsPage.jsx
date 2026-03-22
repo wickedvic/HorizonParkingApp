@@ -2,15 +2,25 @@
 
 import React, { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
-import { Box, Tooltip, IconButton, Typography, Chip, Link } from "@mui/material";
-import { Delete as DeleteIcon, Person as PersonIcon } from "@mui/icons-material";
+import { Box, Tooltip, IconButton, Typography, Chip, Link, Button } from "@mui/material";
+import { 
+  Delete as DeleteIcon, 
+  Person as PersonIcon, 
+  Add as AddIcon, 
+  Edit as EditIcon 
+} from "@mui/icons-material";
 import { MaterialReactTable } from 'material-react-table';
 
 export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   const [cars, setCars] = useState([]);
+  const [clients, setClients] = useState([]); // Added to populate owner dropdown
   const [globalFilter, setGlobalFilter] = useState(initialFilter || "");
 
-  useEffect(() => { loadCars(); }, []);
+  useEffect(() => { 
+    loadCars(); 
+    loadClients(); 
+  }, []);
+
   useEffect(() => { setGlobalFilter(initialFilter || ""); }, [initialFilter]);
 
   const loadCars = async () => {
@@ -19,6 +29,42 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       const data = await res.json();
       setCars(Array.isArray(data) ? data : []);
     } catch (err) { console.error("Failed to load cars:", err); }
+  };
+
+  const loadClients = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/clients`);
+      const data = await res.json();
+      setClients(Array.isArray(data) ? data : []);
+    } catch (err) { console.error("Failed to load clients:", err); }
+  };
+
+  const handleCreateCar = async ({ values, table }) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/cars`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...values, addedBy: user?.username }),
+      });
+      if (res.ok) {
+        loadCars();
+        table.setCreatingRow(null);
+      }
+    } catch (err) { console.error("Error creating car:", err); }
+  };
+
+  const handleSaveCar = async ({ values, table }) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/cars/${values.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      if (res.ok) {
+        loadCars();
+        table.setEditingRow(null);
+      }
+    } catch (err) { console.error("Error updating car:", err); }
   };
 
   const handleDeleteCar = async (id, plate) => {
@@ -31,65 +77,51 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   };
 
   const columns = useMemo(() => [
+    { accessorKey: "id", header: "ID", enableEditing: false, size: 80 },
     { 
       accessorKey: "license_plate", 
       header: "Plate", 
+      muiEditTextFieldProps: { required: true },
       Cell: ({ cell }) => (
         <Typography sx={{ fontWeight: 'bold', fontFamily: 'monospace' }}>
           {cell.getValue()?.split('\r')[0]}
         </Typography>
       )
     },
-    { accessorKey: "make", header: "Make" },
+    { accessorKey: "make", header: "Make", muiEditTextFieldProps: { required: true } },
     { accessorKey: "model", header: "Model" },
+    { accessorKey: "year", header: "Year" },
+    { accessorKey: "color", header: "Color" },
     {
-      id: "owner_name", // Unique ID for the column
+      accessorKey: "owner_id",
       header: "Owner",
-      // Accessor function combines first and last name for sorting/filtering
+      editVariant: 'select',
+      editSelectOptions: clients.map(c => ({
+        label: `${c.lastName}, ${c.firstName} (ID: ${c.id})`,
+        value: c.id,
+      })),
+      muiEditTextFieldProps: ({ row }) => ({
+        select: true,
+        defaultValue: row?.original?.owner_id,
+      }),
+      // Display the name in the table row
       accessorFn: (row) => `${row.owner_first || ''} ${row.owner_last || ''}`,
+      id: "owner_name",
       Cell: ({ row, renderedCellValue }) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <PersonIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
           <Link
             component="button"
             variant="body2"
-            sx={{ 
-              fontWeight: 600, 
-              textAlign: 'left',
-              textDecoration: 'none',
-              '&:hover': { textDecoration: 'underline' } 
-            }}
-            onClick={() => {
-              // Navigate using the Last Name for the best filtering results on the Clients page
-              const lastName = row.original.owner_last || "";
-              onNavigateClient(lastName);
-            }}
+            sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }}
+            onClick={() => onNavigateClient(row.original.owner_last || "")}
           >
-            {renderedCellValue || "Unknown Owner"}
+            {renderedCellValue && renderedCellValue.trim() !== "" ? renderedCellValue : `ID: ${row.original.owner_id}`}
           </Link>
         </Box>
       ),
     },
-    {
-      accessorKey: "actions",
-      header: "Actions",
-      enableSorting: false,
-      size: 100,
-      Cell: ({ row }) => (
-        user?.role === "admin" && (
-          <Tooltip title="Delete Vehicle">
-            <IconButton 
-              color="error" 
-              size="small"
-              onClick={() => handleDeleteCar(row.original.id, row.original.license_plate)}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        )
-      )
-    },
-  ], [onNavigateClient, user?.role]);
+  ], [onNavigateClient, clients]);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -100,14 +132,36 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       <MaterialReactTable 
         columns={columns} 
         data={cars} 
+        editDisplayMode="modal"
+        enableEditing
+        onEditingRowSave={handleSaveCar}
+        onCreatingRowSave={handleCreateCar}
         state={{ globalFilter }} 
         onGlobalFilterChange={setGlobalFilter}
+        renderTopToolbarCustomActions={({ table }) => (
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>
+            Add New Vehicle
+          </Button>
+        )}
+        renderRowActions={({ row, table }) => (
+          <Box sx={{ display: 'flex', gap: '0.5rem' }}>
+            <Tooltip title="Edit">
+              <IconButton onClick={() => table.setEditingRow(row)}>
+                <EditIcon />
+              </IconButton>
+            </Tooltip>
+            {user?.role === "admin" && (
+              <Tooltip title="Delete">
+                <IconButton color="error" onClick={() => handleDeleteCar(row.original.id, row.original.license_plate)}>
+                  <DeleteIcon />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
+        )}
         enableStickyHeader
         initialState={{ density: 'compact' }}
-        muiTablePaperProps={{
-          elevation: 2,
-          sx: { borderRadius: '12px' }
-        }}
+        muiTablePaperProps={{ elevation: 2, sx: { borderRadius: '12px' } }}
       />
     </Box>
   );

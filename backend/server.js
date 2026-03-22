@@ -97,7 +97,7 @@ app.put("/clients/:id", async (req, res) => {
   }
 });
 
-// --- CARS ---
+// --- CARS (VEHICLES) ---
 app.get("/cars", async (req, res) => {
   try {
     const [rows] = await pool.query(`
@@ -120,6 +120,34 @@ app.get("/cars", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ADD NEW CAR
+app.post("/cars", async (req, res) => {
+  const { make, model, color, year, license_plate, owner_id, addedBy } = req.body;
+  try {
+    const [result] = await pool.query(
+      `INSERT INTO Cars (\`Car Make\`, Model, Color, Year, License, Owner, AddedBy, AddedTS) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [make, model, color, year, license_plate, owner_id, addedBy || 'Admin']
+    );
+    res.json({ success: true, id: result.insertId });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// UPDATE CAR DETAILS
+app.put("/cars/:id", async (req, res) => {
+  const { id } = req.params;
+  const { make, model, color, year, license_plate, owner_id } = req.body;
+  try {
+    await pool.query(
+      `UPDATE Cars SET 
+       \`Car Make\` = ?, Model = ?, Color = ?, Year = ?, License = ?, Owner = ? 
+       WHERE \`Car ID#\` = ?`,
+      [make, model, color, year, license_plate, owner_id, id]
+    );
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.delete("/cars/:id", async (req, res) => {
   try {
     await pool.query("DELETE FROM Cars WHERE `Car ID#` = ?", [req.params.id]);
@@ -129,7 +157,6 @@ app.delete("/cars/:id", async (req, res) => {
 
 // --- MASS PAYMENTS LOGIC ---
 
-// Get log to check for duplicates
 app.get("/mass-payments-log", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM MassPaymentsLog ORDER BY DateProcessed DESC");
@@ -137,28 +164,21 @@ app.get("/mass-payments-log", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Atomic transaction to process everyone at once
 app.post("/process-mass-payment", async (req, res) => {
   const { month, clients, addedBy } = req.body;
   const connection = await pool.getConnection();
-  
   try {
     await connection.beginTransaction();
-
-    // 1. Insert into MassPaymentsLog
     await connection.query(
       "INSERT INTO MassPaymentsLog (MonthProcessed, DateProcessed, AddedBy) VALUES (?, NOW(), ?)",
       [month, addedBy || 'Admin']
     );
-
-    // 2. Insert into Payments for every active client
     for (const client of clients) {
       await connection.query(
         "INSERT INTO Payments (Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy) VALUES (?, ?, ?, NOW(), ?)",
         [client.id, month, client.feeCharged || "120", addedBy || 'Admin']
       );
     }
-
     await connection.commit();
     res.json({ success: true });
   } catch (err) {
