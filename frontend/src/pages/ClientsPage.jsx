@@ -102,7 +102,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     printWindow.document.close();
   };
 
-  // --- PDF 2: PAYMENT RECEIPT (Choose Month) ---
+  // --- PDF 2: PAYMENT RECEIPT ---
   const handlePrintReceipt = (client) => {
     const defaultMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
     const selectedMonth = window.prompt("Enter the Effective Month/Year for this receipt:", defaultMonth);
@@ -235,10 +235,10 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         { label: 'Active', value: 'active' }, 
         { label: 'Inactive', value: 'inactive' }
       ],
-      // This ensures the current value is pre-selected in the modal
+      // FIXED: Use value instead of defaultValue to ensure it syncs with the current row
       muiEditTextFieldProps: ({ row }) => ({
         select: true,
-        defaultValue: row?.original?.status || 'active',
+        value: row?.original?.status || 'active',
       }),
       Cell: ({ cell }) => (
         <Chip 
