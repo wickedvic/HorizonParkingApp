@@ -83,6 +83,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const handlePrintPermit = (client) => {
     const clientVehicles = allCars.filter(car => car.owner_id == client.id);
     const monthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+    
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
       <html>
@@ -331,7 +332,8 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" sx={{fontWeight:'bold'}}><PermitIcon fontSize="small" /> Billing</Typography>
-                  <Paper variant="outlined" sx={{p:2}}>Fee: $${row.original.feeCharged || '0'}.00<br/>Permits: ${row.original.permitNumber || 'None'}</Paper>
+                  {/* FIXED: Removed double $$ and stray $ before permits */}
+                  <Paper variant="outlined" sx={{p:2}}>Fee: ${row.original.feeCharged || '0'}.00<br/>Permits: {row.original.permitNumber || 'None'}</Paper>
                 </Grid>
               </Grid>
             </Box>
