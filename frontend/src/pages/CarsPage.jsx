@@ -54,9 +54,11 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   // --- CSV EXPORT HANDLERS ---
   const handleExportByStatus = (status) => {
-    const filteredData = displayedCars.filter(car => {
-      const owner = clients.find(c => c.id === car.owner_id);
-      return (owner?.status?.toLowerCase() || 'inactive') === status.toLowerCase();
+    // FIX: Use loose equality (==) to handle String vs Number ID comparison
+    const filteredData = cars.filter(car => {
+      const owner = clients.find(c => c.id == car.owner_id);
+      const ownerStatus = owner?.status?.toLowerCase() || "inactive";
+      return ownerStatus === status.toLowerCase();
     });
     const config = mkConfig({ ...csvConfigBase, filename: `${status}-vehicles-export` });
     const csv = generateCsv(config)(filteredData);
@@ -109,7 +111,8 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   // Filter cars based on the Owner's status
   const displayedCars = useMemo(() => {
     return cars.filter(car => {
-      const owner = clients.find(c => c.id === car.owner_id);
+      // FIX: Changed === to == to handle data type mismatches (String vs Number)
+      const owner = clients.find(c => c.id == car.owner_id);
       const ownerStatus = owner?.status?.toLowerCase() || "inactive";
       return ownerStatus === statusFilter.toLowerCase();
     });
