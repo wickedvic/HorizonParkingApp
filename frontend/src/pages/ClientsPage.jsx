@@ -235,10 +235,10 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         { label: 'Active', value: 'active' }, 
         { label: 'Inactive', value: 'inactive' }
       ],
-      // FIXED: Use value instead of defaultValue to ensure it syncs with the current row
+      // FIX: This ensures the dropdown pre-populates with the row's current status
       muiEditTextFieldProps: ({ row }) => ({
         select: true,
-        value: row?.original?.status || 'active',
+        defaultValue: row?.original?.status, 
       }),
       Cell: ({ cell }) => (
         <Chip 
