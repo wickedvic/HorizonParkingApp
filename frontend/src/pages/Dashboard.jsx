@@ -7,11 +7,13 @@ import PermitsPage from "./PermitsPage"
 import PaymentsPage from "./PaymentsPage"
 import ReportsPage from "./ReportsPage"
 import CarsPage from "./CarsPage"
+import { Search as SearchIcon } from "@mui/icons-material" // Added for the search bar
 import "./Dashboard.css"
 
 export default function Dashboard({ user, onLogout }) {
   const [currentPage, setCurrentPage] = useState("dashboard")
   const [stats, setStats] = useState({ clients: 0, cars: 0, permits: 0, payments: 0 })
+  const [globalSearch, setGlobalSearch] = useState("") // New state for search input
   
   // Navigation States
   const [initialClientFilter, setInitialClientFilter] = useState("")
@@ -43,6 +45,29 @@ export default function Dashboard({ user, onLogout }) {
       })
     } catch (err) { console.error("Stats load failed:", err) }
   }
+
+  // --- NEW: GLOBAL SEARCH HANDLER ---
+  const handleGlobalSearch = (e) => {
+    e.preventDefault();
+    if (!globalSearch.trim()) return;
+
+    const query = globalSearch.trim();
+
+    // Logic to triage search:
+    // 1. If it has a hyphen or looks like a standard plate format (e.g., ABC-1234), go to Cars
+    // 2. Otherwise, check against Clients (Names or Permit #)
+    // We can prioritize Clients as the default broad search
+    
+    // Check if it's likely a license plate (common pattern check)
+    const looksLikePlate = /[A-Z0-9]{3,}/.test(query) && query.length <= 8;
+
+    if (looksLikePlate && !query.startsWith('P-')) {
+        handleNavigateToCars(query);
+    } else {
+        handleNavigateToClients(query);
+    }
+    setGlobalSearch(""); // Reset search bar after navigating
+  };
 
   const handleNavigateToClients = (ownerId) => {
     setInitialClientFilter(ownerId)
@@ -81,8 +106,6 @@ export default function Dashboard({ user, onLogout }) {
           <button className={`nav-btn ${currentPage === "clients" ? "active" : ""}`} onClick={() => navTo("clients")}>👥 Clients</button>
           <button className={`nav-btn ${currentPage === "cars" ? "active" : ""}`} onClick={() => navTo("cars")}>🚙 Vehicles</button>
           <button className={`nav-btn ${currentPage === "permits" ? "active" : ""}`} onClick={() => navTo("permits")}>🎫 Temporary Permits</button>
-          <button className={`nav-btn ${currentPage === "payments" ? "active" : ""}`} onClick={() => navTo("payments")}>💰 Billing</button>
-          <button className={`nav-btn ${currentPage === "reports" ? "active" : ""}`} onClick={() => navTo("reports")}>📈 Reports</button>
         </nav>
         <div className="sidebar-footer">
           <div className="user-info">Logged in as <strong>{user.username}</strong></div>
@@ -94,6 +117,52 @@ export default function Dashboard({ user, onLogout }) {
         {currentPage === "dashboard" && (
           <div className="animate-fade-in">
             <h2 className="page-title">Dashboard Overview</h2>
+            
+            {/* --- NEW: GLOBAL SEARCH SECTION --- */}
+            <Paper 
+                elevation={0} 
+                sx={{ 
+                    p: '20px', 
+                    mb: '30px', 
+                    borderRadius: '12px', 
+                    border: '1px solid #e0e0e0',
+                    background: '#f8f9fa' 
+                }}
+            >
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#2c3e50' }}>
+                    Global System Search
+                </Typography>
+                <form onSubmit={handleGlobalSearch} style={{ display: 'flex', gap: '10px' }}>
+                    <div style={{ position: 'relative', flexGrow: 1 }}>
+                        <SearchIcon sx={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#95a5a6' }} />
+                        <input 
+                            type="text"
+                            placeholder="Search by Name, License Plate, or Permit #..."
+                            value={globalSearch}
+                            onChange={(e) => setGlobalSearch(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '12px 12px 12px 40px',
+                                borderRadius: '8px',
+                                border: '1px solid #ced4da',
+                                fontSize: '16px',
+                                outline: 'none'
+                            }}
+                        />
+                    </div>
+                    <button 
+                        type="submit"
+                        className="nav-btn active" 
+                        style={{ width: 'auto', padding: '0 30px', margin: 0 }}
+                    >
+                        Search
+                    </button>
+                </form>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                    Tip: Enter a Plate to jump to Vehicles, or a Name/Permit ID to jump to Clients.
+                </Typography>
+            </Paper>
+
             <div className="stats-grid">
               <div className="stat-card info"><h3>Total Clients</h3><p className="stat-number">{stats.clients}</p></div>
               <div className="stat-card warning"><h3>Total Vehicles</h3><p className="stat-number">{stats.cars}</p></div>
