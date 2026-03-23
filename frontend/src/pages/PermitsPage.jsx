@@ -209,7 +209,7 @@ export default function PermitsPage({ user, initialFilter }) {
         renderRowActions={({ row }) => (
           <Box sx={{ display: 'flex', gap: '0.5rem' }}>
             <Tooltip title="Print Permit"><IconButton onClick={() => handlePrintPermit(row.original)} color="primary"><PrintIcon /></IconButton></Tooltip>
-            <Tooltip title="Delete"><IconButton onClick={() => handleDeletePermit(row.original.TempPermitID)} color="error"><DeleteIcon /></IconButton></Tooltip>
+            <Tooltip title="Delete"><IconButton onClick={() => {handleDeletePermit(row.original.TempPermitID); console.log(row)}} color="error"><DeleteIcon /></IconButton></Tooltip>
           </Box>
         )}
         muiTablePaperProps={{ elevation: 2, sx: { borderRadius: '12px' } }}
