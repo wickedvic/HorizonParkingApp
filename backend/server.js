@@ -63,13 +63,17 @@ app.get("/clients", async (req, res) => {
 app.post("/clients", async (req, res) => {
   const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp, addedBy } = req.body;
   try {
+    // FIXED: Ensured 16 placeholders match the 16 variables provided
     const [result] = await pool.query(
       `INSERT INTO People (First, Last, Address, City, ST, zip, \`Cell Phone\`, \`Permit #\`, \`Fee Charged\`, EmailAddr, Company, Status, \`Client Type\`, CreditCardNum, CreditCardExpDate, AddedBy, AddedTS) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status || 'active', type || 'tenant', ccNum, ccExp, addedBy]
     );
     res.json({ success: true, id: result.insertId });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    console.error(err);
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
 app.put("/clients/:id", async (req, res) => {

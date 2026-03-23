@@ -12,7 +12,6 @@ import {
   Badge as PermitIcon, 
   Add as AddIcon, 
   Edit as EditIcon, 
-  Info as InfoIcon,
   PictureAsPdf as PdfIcon,
   Payments as CashIcon,
   History as HistoryIcon,
@@ -249,7 +248,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         type: values.type
     };
     try {
-      // Use row.original.id for the database ID
       const res = await fetch(`${API_BASE_URL}/clients/${row.original.id}`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -275,7 +273,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         ],
         muiEditTextFieldProps: ({ row }) => ({
           select: true,
-          // FIX: Changed from value to defaultValue
           defaultValue: row?.original?.type || 'tenant', 
         }),
         Cell: ({ cell }) => <Chip label={cell.getValue()?.charAt(0).toUpperCase() + cell.getValue()?.slice(1)} variant="outlined" size="small" />
@@ -290,7 +287,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       ],
       muiEditTextFieldProps: ({ row }) => ({
         select: true,
-        // FIX: Changed from value to defaultValue
         defaultValue: normalize(row?.original?.status || 'active'), 
       }),
       Cell: ({ cell }) => (
@@ -330,6 +326,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         onColumnFiltersChange={setColumnFilters}
         renderTopToolbarCustomActions={({ table }) => (
           <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {/* LABEL UPDATED TO Add New Client */}
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>Add New Client</Button>
             <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
             <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
