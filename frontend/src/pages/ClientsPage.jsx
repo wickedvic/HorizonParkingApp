@@ -253,6 +253,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
           { label: 'Employee', value: 'Employee' },
           { label: 'Payer', value: 'Payer' }
         ],
+        // FIX: Ensure correct data mapping for Type dropdown
         muiEditTextFieldProps: ({ row }) => ({
           select: true,
           defaultValue: row?.original?.type || 'Tenant', 
@@ -267,14 +268,15 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         { label: 'Active', value: 'active' }, 
         { label: 'Inactive', value: 'inactive' }
       ],
+      // FIX: Force dropdown to select current row value by converting to lowercase to match keys
       muiEditTextFieldProps: ({ row }) => ({
         select: true,
-        defaultValue: row?.original?.status, 
+        defaultValue: row?.original?.status?.toLowerCase() || 'active', 
       }),
       Cell: ({ cell }) => (
         <Chip 
           label={cell.getValue()?.toUpperCase()} 
-          color={cell.getValue() === 'active' ? 'success' : 'default'} 
+          color={cell.getValue()?.toLowerCase() === 'active' ? 'success' : 'default'} 
           size="small" 
         />
       )
@@ -318,7 +320,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
             <Tooltip title="Parking Permit"><IconButton onClick={() => handlePrintPermit(row.original)} color="error"><ParkingIcon /></IconButton></Tooltip>
             <Tooltip title="Monthly Receipt"><IconButton onClick={() => handlePrintReceipt(row.original)} color="primary"><PdfIcon /></IconButton></Tooltip>
             <Tooltip title="Payment History"><IconButton onClick={() => handlePrintHistory(row.original)} color="info"><HistoryIcon /></IconButton></Tooltip>
-            <Tooltip title="Edit"><IconButton onClick={() => {table.setEditingRow(row); console.log("RPW DATA", row)}}><EditIcon /></IconButton></Tooltip>
+            <Tooltip title="Edit"><IconButton onClick={() => {table.setEditingRow(row);}}><EditIcon /></IconButton></Tooltip>
           </Stack>
         )}
         renderDetailPanel={({ row }) => {
@@ -332,7 +334,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" sx={{fontWeight:'bold'}}><PermitIcon fontSize="small" /> Billing</Typography>
-                  {/* FIXED: Removed double $$ and stray $ before permits */}
                   <Paper variant="outlined" sx={{p:2}}>Fee: ${row.original.feeCharged || '0'}.00<br/>Permits: {row.original.permitNumber || 'None'}</Paper>
                 </Grid>
               </Grid>
