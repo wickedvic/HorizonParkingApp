@@ -225,14 +225,12 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   };
 
   const handleCreateClient = async ({ values, table }) => {
-    const permitVal = values.permitNumber || `P-${Math.floor(1000 + Math.random() * 9000)}`;
-    const feeVal = values.feeCharged || "120";
     const payload = { 
         ...values, 
-        permitNumber: permitVal, 
-        feeCharged: feeVal, 
+        permitNumber: values.permitNumber || `P-${Math.floor(1000 + Math.random() * 9000)}`, 
+        feeCharged: values.feeCharged || "120", 
         status: normalize(values.status || 'active'), 
-        type: normalize(values.type || 'tenant'),
+        type: values.type || 'tenant',
         addedBy: user?.username || 'Sys' 
     };
     try {
@@ -244,14 +242,15 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     } catch (err) { console.error(err); }
   };
 
-  const handleSaveClient = async ({ values, table }) => {
+  const handleSaveClient = async ({ values, row, table }) => {
     const payload = { 
         ...values, 
         status: normalize(values.status),
-        type: normalize(values.type)
+        type: values.type
     };
     try {
-      const res = await fetch(`${API_BASE_URL}/clients/${values.id}`, {
+      // Use row.original.id for the database ID
+      const res = await fetch(`${API_BASE_URL}/clients/${row.original.id}`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -276,8 +275,8 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         ],
         muiEditTextFieldProps: ({ row }) => ({
           select: true,
-          // FIX: Changed value to defaultValue to allow editing
-          defaultValue: normalize(row?.original?.type || 'tenant'), 
+          // FIX: Changed from value to defaultValue
+          defaultValue: row?.original?.type || 'tenant', 
         }),
         Cell: ({ cell }) => <Chip label={cell.getValue()?.charAt(0).toUpperCase() + cell.getValue()?.slice(1)} variant="outlined" size="small" />
     },
@@ -291,7 +290,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       ],
       muiEditTextFieldProps: ({ row }) => ({
         select: true,
-        // FIX: Changed value to defaultValue to allow editing
+        // FIX: Changed from value to defaultValue
         defaultValue: normalize(row?.original?.status || 'active'), 
       }),
       Cell: ({ cell }) => (
@@ -324,12 +323,14 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         data={displayedClients}
         editDisplayMode="modal"
         enableEditing
+        onEditingRowSave={handleSaveClient}
+        onCreatingRowSave={handleCreateClient}
         state={{ globalFilter, columnFilters }}
         onGlobalFilterChange={setGlobalFilter}
         onColumnFiltersChange={setColumnFilters}
         renderTopToolbarCustomActions={({ table }) => (
           <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>Add Client</Button>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>Add New Client</Button>
             <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
             <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
             <Button startIcon={<FileDownloadIcon />} onClick={handleExportAll} variant="outlined" size="small">Export All</Button>

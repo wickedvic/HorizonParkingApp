@@ -128,7 +128,10 @@ app.post("/permits", async (req, res) => {
       [manualID, user_name, permit_number, start_date, end_date, shortAddedBy]
     );
     res.json({ success: true, id: manualID });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    console.error("Permit Creation Error:", err.message);
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
 app.delete("/permits/:id", async (req, res) => {
@@ -136,7 +139,10 @@ app.delete("/permits/:id", async (req, res) => {
     const [result] = await pool.query("DELETE FROM DailyPermit WHERE TempPermitID = ?", [req.params.id]);
     if (result.affectedRows === 0) return res.status(404).json({ error: "Record not found" });
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    console.error("Delete Error:", err.message);
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
 // --- PAYMENTS & MASS PAYMENTS ---
