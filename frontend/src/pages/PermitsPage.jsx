@@ -44,9 +44,9 @@ export default function PermitsPage({ user, initialFilter }) {
   }
 
   const handleDeletePermit = async (tempPermitId) => {
-    // FIX: Verify the ID is present before attempting delete
+    // Check for ID presence 
     if (!tempPermitId) {
-      alert("Error: Record ID is missing.");
+      alert("Error: Record ID is missing. This record cannot be deleted via the UI until it has a valid TempPermitID.");
       return;
     }
     if (!window.confirm("Are you sure you want to delete this permit record?")) return;
@@ -68,7 +68,7 @@ export default function PermitsPage({ user, initialFilter }) {
   };
 
   const handlePrintPermit = (permit) => {
-    // FIX: Range text for the big heading as requested
+    // FIX: Use specific Date Range as primary heading [cite: 7]
     const rangeHeader = `${formatDate(permit.PermitStartDate)} - ${formatDate(permit.PermitEndDate)}`;
     
     const printWindow = window.open('', '_blank');
@@ -83,7 +83,7 @@ export default function PermitsPage({ user, initialFilter }) {
             h1 { font-size: 72px; color: #d32f2f; margin: 20px 0; font-weight: bold; }
             .address { font-size: 22px; margin-bottom: 30px; font-weight: bold; }
             .permit-label { font-size: 40px; font-weight: bold; text-decoration: underline; }
-            .date-highlight { font-size: 44px; color: #d32f2f; font-weight: bold; margin: 30px 0; border: 2px solid #d32f2f; padding: 10px; display: inline-block; }
+            .date-highlight { font-size: 44px; color: #d32f2f; font-weight: bold; margin: 30px 0; border: 2px solid #d32f2f; padding: 15px; display: inline-block; }
             .signature { margin-top: 100px; text-align: right; font-size: 24px; color: #d32f2f; }
             .footer-info { margin-top: 60px; font-size: 18px; font-weight: bold; }
           </style>
@@ -108,6 +108,7 @@ export default function PermitsPage({ user, initialFilter }) {
 
   const handleAddPermit = async (e) => {
     e.preventDefault()
+    // Generate the Permit ID string 
     const generatedPermitNum = `T-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     const payload = { ...formData, permit_number: generatedPermitNum };
 
@@ -118,6 +119,9 @@ export default function PermitsPage({ user, initialFilter }) {
         body: JSON.stringify(payload),
       })
       if (res.ok) {
+        const responseData = await res.json();
+        
+        // Auto-print data needs the newly generated fields [cite: 4, 6, 7]
         const newPermitPrintData = {
           UserName: formData.user_name,
           PermitStartDate: formData.start_date,
@@ -149,7 +153,6 @@ export default function PermitsPage({ user, initialFilter }) {
   }, [permits, dateRange]);
 
   const columns = useMemo(() => [
-    // Added TempPermitID to columns but kept it hidden so row actions can find it
     { accessorKey: "TempPermitID", header: "ID", size: 50 },
     { accessorKey: "PermitDate", header: "Permit #", size: 120 },
     { accessorKey: "UserName", header: "Name" },
@@ -204,12 +207,12 @@ export default function PermitsPage({ user, initialFilter }) {
         enableRowActions
         initialState={{ 
             density: 'compact',
-            columnVisibility: { TempPermitID: false } // Hides ID column from UI but keeps data accessible
+            columnVisibility: { TempPermitID: false } 
         }}
         renderRowActions={({ row }) => (
           <Box sx={{ display: 'flex', gap: '0.5rem' }}>
             <Tooltip title="Print Permit"><IconButton onClick={() => handlePrintPermit(row.original)} color="primary"><PrintIcon /></IconButton></Tooltip>
-            <Tooltip title="Delete"><IconButton onClick={() => {handleDeletePermit(row.original.TempPermitID); console.log(row)}} color="error"><DeleteIcon /></IconButton></Tooltip>
+            <Tooltip title="Delete"><IconButton onClick={() => handleDeletePermit(row.original.TempPermitID)} color="error"><DeleteIcon /></IconButton></Tooltip>
           </Box>
         )}
         muiTablePaperProps={{ elevation: 2, sx: { borderRadius: '12px' } }}

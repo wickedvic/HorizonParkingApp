@@ -121,24 +121,33 @@ app.get("/permits", async (req, res) => {
 app.post("/permits", async (req, res) => {
   const { user_name, start_date, end_date, added_by, permit_number } = req.body;
   try {
-    // Schema limits AddedBy to varchar(3). ensure we don't overflow.
+    // Standardize AddedBy to 3-char varchar limit
     const shortAddedBy = (added_by || 'ADM').substring(0, 3).toUpperCase();
+    
+    // FIX: Generate a random ID manually for TempPermitID to ensure it is not null
+    const manualID = Math.floor(100000 + Math.random() * 900000);
+
     const [result] = await pool.query(
-      "INSERT INTO DailyPermit (UserName, PermitDate, PermitStartDate, PermitEndDate, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, NOW())",
-      [user_name, permit_number, start_date, end_date, shortAddedBy]
+      "INSERT INTO DailyPermit (TempPermitID, UserName, PermitDate, PermitStartDate, PermitEndDate, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, ?, NOW())",
+      [manualID, user_name, permit_number, start_date, end_date, shortAddedBy]
     );
-    res.json({ success: true, id: result.insertId });
+    res.json({ success: true, id: manualID });
   } catch (err) { 
+    console.error("Permit Creation Error:", err.message);
     res.status(500).json({ error: err.message }); 
   }
 });
 
 app.delete("/permits/:id", async (req, res) => {
   try {
-    // Specifically target TempPermitID as shown in your DESCRIBE output
-    await pool.query("DELETE FROM DailyPermit WHERE TempPermitID = ?", [req.params.id]);
+    // Specifically target TempPermitID from the DESCRIBE schema
+    const [result] = await pool.query("DELETE FROM DailyPermit WHERE TempPermitID = ?", [req.params.id]);
+    if (result.affectedRows === 0) return res.status(404).json({ error: "Record not found" });
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    console.error("Delete Error:", err.message);
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
 // --- PAYMENTS & MASS PAYMENTS ---
