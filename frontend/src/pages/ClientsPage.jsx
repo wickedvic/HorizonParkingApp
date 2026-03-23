@@ -234,7 +234,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
-      if (res.ok) { loadClients(); table.setEditingRow(null); }
+      if (res.ok) { loadClients(); table.setEditingRow(null);}
     } catch (err) { console.error(err); }
   };
 
@@ -318,7 +318,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
             <Tooltip title="Parking Permit"><IconButton onClick={() => handlePrintPermit(row.original)} color="error"><ParkingIcon /></IconButton></Tooltip>
             <Tooltip title="Monthly Receipt"><IconButton onClick={() => handlePrintReceipt(row.original)} color="primary"><PdfIcon /></IconButton></Tooltip>
             <Tooltip title="Payment History"><IconButton onClick={() => handlePrintHistory(row.original)} color="info"><HistoryIcon /></IconButton></Tooltip>
-            <Tooltip title="Edit"><IconButton onClick={() => table.setEditingRow(row)}><EditIcon /></IconButton></Tooltip>
+            <Tooltip title="Edit"><IconButton onClick={() => {table.setEditingRow(row); console.log("RPW DATA", row)}}><EditIcon /></IconButton></Tooltip>
           </Stack>
         )}
         renderDetailPanel={({ row }) => {
