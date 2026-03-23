@@ -29,7 +29,6 @@ export default function PermitsPage({ user, initialFilter }) {
     user_name: "",
     start_date: new Date().toISOString().split("T")[0],
     end_date: new Date().toISOString().split("T")[0],
-    // Schema limit is 3 chars, so we take initials or first 3 letters
     added_by: user?.username?.substring(0, 3).toUpperCase() || "ADM"
   })
 
@@ -44,40 +43,25 @@ export default function PermitsPage({ user, initialFilter }) {
     } catch (err) { console.error("Failed to load permits:", err) }
   }
 
-  const handleDeletePermit = async (id) => {
+  const handleDeletePermit = async (tempPermitId) => {
     if (!window.confirm("Are you sure you want to delete this permit record?")) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/permits/${id}`, { method: "DELETE" });
+      // Corrected parameter to use the actual database ID
+      const res = await fetch(`${API_BASE_URL}/permits/${tempPermitId}`, { method: "DELETE" });
       if (res.ok) loadPermits();
     } catch (err) { console.error(err); }
   }
 
-  const handleAddPermit = async (e) => {
-    e.preventDefault()
-    // Auto-generate a permit number to store in 'PermitDate' column
-    const generatedPermitNum = `T-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-    const payload = { ...formData, permit_number: generatedPermitNum };
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/permits`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-      if (res.ok) {
-        loadPermits()
-        setShowForm(false)
-        setFormData({ ...formData, user_name: "" })
-      } else {
-        const errorData = await res.json();
-        alert(`Error: ${errorData.error || 'Server error'}`);
-      }
-    } catch (err) { console.error(err) }
-  }
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const dateObj = new Date(dateString);
+    if (isNaN(dateObj.getTime())) return "Invalid";
+    return dateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  };
 
   const handlePrintPermit = (permit) => {
-    const startDate = new Date(permit.PermitStartDate);
-    const monthYear = startDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+    // Generate formatted date range for the heading
+    const rangeText = `${formatDate(permit.PermitStartDate)} - ${formatDate(permit.PermitEndDate)}`;
     
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
@@ -91,7 +75,7 @@ export default function PermitsPage({ user, initialFilter }) {
             h1 { font-size: 72px; color: #d32f2f; margin: 20px 0; font-weight: bold; }
             .address { font-size: 22px; margin-bottom: 30px; font-weight: bold; }
             .permit-label { font-size: 40px; font-weight: bold; text-decoration: underline; }
-            .date-highlight { font-size: 80px; color: #d32f2f; font-weight: bold; margin: 30px 0; }
+            .date-highlight { font-size: 48px; color: #d32f2f; font-weight: bold; margin: 30px 0; }
             .signature { margin-top: 100px; text-align: right; font-size: 24px; color: #d32f2f; }
             .footer-info { margin-top: 60px; font-size: 18px; font-weight: bold; }
           </style>
@@ -101,10 +85,9 @@ export default function PermitsPage({ user, initialFilter }) {
           <h1>Parking Permit</h1>
           <div class="address">20 Jerusalem Ave<br/>Hicksville, NY</div>
           <div class="permit-label">Permit #: ${permit.PermitDate || 'TEMP'}</div>
-          <div class="date-highlight">${monthYear}</div>
+          <div class="date-highlight">${rangeText}</div>
           <div style="text-align:left; font-size: 20px; margin-top: 20px;">
-            Valid For: <strong>${permit.UserName}</strong><br/>
-            Range: ${formatDate(permit.PermitStartDate)} - ${formatDate(permit.PermitEndDate)}
+            Valid For: <strong>${permit.UserName}</strong>
           </div>
           <div class="signature">X __________________________________________</div>
           <div class="footer-info">Feel Free to call with any questions: Phone: 516-328-2020</div>
@@ -115,6 +98,39 @@ export default function PermitsPage({ user, initialFilter }) {
     printWindow.document.close();
   };
 
+  const handleAddPermit = async (e) => {
+    e.preventDefault()
+    const generatedPermitNum = `T-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    const payload = { ...formData, permit_number: generatedPermitNum };
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/permits`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      if (res.ok) {
+        // Prepare data for printing based on what was just created
+        const newPermitData = {
+          UserName: formData.user_name,
+          PermitStartDate: formData.start_date,
+          PermitEndDate: formData.end_date,
+          PermitDate: generatedPermitNum
+        };
+        
+        loadPermits()
+        setShowForm(false)
+        setFormData({ ...formData, user_name: "" })
+        
+        // Auto-open PDF after successful creation
+        handlePrintPermit(newPermitData);
+      } else {
+        const errorData = await res.json();
+        alert(`Error: ${errorData.error || 'Server error'}`);
+      }
+    } catch (err) { console.error(err) }
+  }
+
   const filteredPermits = useMemo(() => {
     return permits.filter(p => {
       if (!p.PermitStartDate) return false;
@@ -124,13 +140,6 @@ export default function PermitsPage({ user, initialFilter }) {
       return pDate >= dateRange.start && pDate <= dateRange.end;
     });
   }, [permits, dateRange]);
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const dateObj = new Date(dateString);
-    if (isNaN(dateObj.getTime())) return "Invalid";
-    return dateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-  };
 
   const columns = useMemo(() => [
     { accessorKey: "PermitDate", header: "Permit #", size: 120 },

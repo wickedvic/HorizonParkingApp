@@ -110,7 +110,36 @@ app.delete("/cars/:id", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- MASS PAYMENTS ---
+// --- DAILY PERMITS ---
+app.get("/permits", async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT * FROM DailyPermit ORDER BY AddedTS DESC");
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post("/permits", async (req, res) => {
+  const { user_name, start_date, end_date, added_by, permit_number } = req.body;
+  try {
+    const [result] = await pool.query(
+      "INSERT INTO DailyPermit (UserName, PermitDate, PermitStartDate, PermitEndDate, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, NOW())",
+      [user_name, permit_number, start_date, end_date, added_by.substring(0, 3)]
+    );
+    res.json({ success: true, id: result.insertId });
+  } catch (err) { 
+    res.status(500).json({ error: err.message }); 
+  }
+});
+
+app.delete("/permits/:id", async (req, res) => {
+  try {
+    // Specifically target TempPermitID as shown in your schema
+    await pool.query("DELETE FROM DailyPermit WHERE TempPermitID = ?", [req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- PAYMENTS & MASS PAYMENTS ---
 app.get("/mass-payments-log", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM MassPaymentsLog ORDER BY DateProcessed DESC");
@@ -135,37 +164,6 @@ app.post("/process-mass-payment", async (req, res) => {
   } finally { connection.release(); }
 });
 
-// --- DAILY PERMITS ---
-app.get("/permits", async (req, res) => {
-  try {
-    const [rows] = await pool.query("SELECT * FROM DailyPermit ORDER BY AddedTS DESC");
-    res.json(rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post("/permits", async (req, res) => {
-  const { user_name, start_date, end_date, added_by, permit_number } = req.body;
-  try {
-    // Mapping permit_number to PermitDate column as it is the only generic text field available for string IDs
-    const [result] = await pool.query(
-      "INSERT INTO DailyPermit (UserName, PermitDate, PermitStartDate, PermitEndDate, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, NOW())",
-      [user_name, permit_number, start_date, end_date, added_by.substring(0, 3)]
-    );
-    res.json({ success: true, id: result.insertId });
-  } catch (err) { 
-    console.error("DB Error:", err.message);
-    res.status(500).json({ error: err.message }); 
-  }
-});
-
-app.delete("/permits/:id", async (req, res) => {
-  try {
-    await pool.query("DELETE FROM DailyPermit WHERE TempPermitID = ?", [req.params.id]);
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// --- PAYMENTS ---
 app.get("/payments", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM Payments ORDER BY AddedTS DESC");
