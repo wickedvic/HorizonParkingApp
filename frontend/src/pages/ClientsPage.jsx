@@ -34,7 +34,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const [payments, setPayments] = useState([]);
   const [statusFilter, setStatusFilter] = useState("active");
   
-  // NEW: Split filter state to handle targeted searches
   const [globalFilter, setGlobalFilter] = useState("");
   const [columnFilters, setColumnFilters] = useState([]);
 
@@ -42,14 +41,13 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     loadClients(); loadAllCars(); loadPayments();
   }, []);
 
-  // FIX: Targeted Filtering Logic
+  const normalize = (val) => val?.toString().toLowerCase().trim() || "";
+
   useEffect(() => {
     if (initialFilter && typeof initialFilter === 'object' && initialFilter.id) {
-      // It's a targeted ID search from Dashboard results
       setGlobalFilter("");
       setColumnFilters([{ id: 'id', value: initialFilter.id.toString() }]);
     } else {
-      // It's a broad text search (Name or Permit #) from search bar
       setGlobalFilter(initialFilter || "");
       setColumnFilters([]);
     }
@@ -80,7 +78,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   }
 
   const handleExportByStatus = (status) => {
-    const filteredData = clients.filter(c => c.status?.toLowerCase() === status.toLowerCase());
+    const filteredData = clients.filter(c => normalize(c.status) === normalize(status));
     const config = mkConfig({ ...csvConfigBase, filename: `${status}-clients-export` });
     const csv = generateCsv(config)(filteredData);
     download(config)(csv);
@@ -92,7 +90,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     download(config)(csv);
   };
 
-  // --- PDF Logic ---
   const handlePrintPermit = (client) => {
     const clientVehicles = allCars.filter(car => car.owner_id == client.id);
     const monthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -215,10 +212,10 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     try {
       const logRes = await fetch(`${API_BASE_URL}/mass-payments-log`);
       const logs = await logRes.json();
-      if (logs.some(log => log.MonthProcessed === currentMonth)) {
+      if (logs.some(log => normalize(log.MonthProcessed) === normalize(currentMonth))) {
         alert(`Already processed for ${currentMonth}.`); return;
       }
-      const activeClients = clients.filter(c => c.status === 'active');
+      const activeClients = clients.filter(c => normalize(c.status) === 'active');
       const res = await fetch(`${API_BASE_URL}/process-mass-payment`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ month: currentMonth, clients: activeClients, addedBy: user?.username }),
@@ -230,7 +227,14 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const handleCreateClient = async ({ values, table }) => {
     const permitVal = values.permitNumber || `P-${Math.floor(1000 + Math.random() * 9000)}`;
     const feeVal = values.feeCharged || "120";
-    const payload = { ...values, permitNumber: permitVal, feeCharged: feeVal, status: values.status || 'active', addedBy: user?.username || 'Sys' };
+    const payload = { 
+        ...values, 
+        permitNumber: permitVal, 
+        feeCharged: feeVal, 
+        status: normalize(values.status || 'active'), 
+        type: normalize(values.type || 'tenant'),
+        addedBy: user?.username || 'Sys' 
+    };
     try {
       const res = await fetch(`${API_BASE_URL}/clients`, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -241,36 +245,62 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   };
 
   const handleSaveClient = async ({ values, table }) => {
+    const payload = { 
+        ...values, 
+        status: normalize(values.status),
+        type: normalize(values.type)
+    };
     try {
       const res = await fetch(`${API_BASE_URL}/clients/${values.id}`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify(payload),
       });
       if (res.ok) { loadClients(); table.setEditingRow(null);}
     } catch (err) { console.error(err); }
   };
 
-  const displayedClients = useMemo(() => clients.filter(c => c.status?.toLowerCase() === statusFilter.toLowerCase()), [clients, statusFilter]);
+  const displayedClients = useMemo(() => clients.filter(c => normalize(c.status) === normalize(statusFilter)), [clients, statusFilter]);
 
   const columns = useMemo(() => [
-    { accessorKey: "id", header: "ID", enableEditing: false, size: 80, filterFn: 'equals' }, // Exact filter for ID
+    { accessorKey: "id", header: "ID", enableEditing: false, size: 80, filterFn: 'equals' },
     { accessorKey: "firstName", header: "First Name", muiEditTextFieldProps: { required: true } },
     { accessorKey: "lastName", header: "Last Name", muiEditTextFieldProps: { required: true } },
     { 
         accessorKey: "type", 
         header: "Type", 
         editVariant: 'select', 
-        editSelectOptions: [{ label: 'Tenant', value: 'Tenant' }, { label: 'Employee', value: 'Employee' }, { label: 'Payer', value: 'Payer' }],
-        muiEditTextFieldProps: ({ row }) => ({ select: true, value: row?.original?.type || 'Tenant' }),
-        Cell: ({ cell }) => <Chip label={cell.getValue()} variant="outlined" size="small" />
+        editSelectOptions: [
+          { label: 'Tenant', value: 'tenant' }, 
+          { label: 'Employee', value: 'employee' },
+          { label: 'Payer', value: 'payer' }
+        ],
+        muiEditTextFieldProps: ({ row }) => ({
+          select: true,
+          // FIX: Changed value to defaultValue to allow editing
+          defaultValue: normalize(row?.original?.type || 'tenant'), 
+        }),
+        Cell: ({ cell }) => <Chip label={cell.getValue()?.charAt(0).toUpperCase() + cell.getValue()?.slice(1)} variant="outlined" size="small" />
     },
     { 
       accessorKey: "status", 
       header: "Status", 
       editVariant: 'select', 
-      editSelectOptions: [{ label: 'Active', value: 'active' }, { label: 'Inactive', value: 'inactive' }],
-      muiEditTextFieldProps: ({ row }) => ({ select: true, value: row?.original?.status?.toLowerCase() === 'active' ? 'active' : 'inactive' }),
-      Cell: ({ cell }) => <Chip label={cell.getValue()?.toUpperCase()} color={cell.getValue()?.toLowerCase() === 'active' ? 'success' : 'default'} size="small" />
+      editSelectOptions: [
+        { label: 'Active', value: 'active' }, 
+        { label: 'Inactive', value: 'inactive' }
+      ],
+      muiEditTextFieldProps: ({ row }) => ({
+        select: true,
+        // FIX: Changed value to defaultValue to allow editing
+        defaultValue: normalize(row?.original?.status || 'active'), 
+      }),
+      Cell: ({ cell }) => (
+        <Chip 
+          label={cell.getValue()?.toUpperCase()} 
+          color={normalize(cell.getValue()) === 'active' ? 'success' : 'default'} 
+          size="small" 
+        />
+      )
     },
     { accessorKey: "permitNumber", header: "Permit #", Cell: ({ cell }) => cell.getValue() ? cell.getValue().split(',').map((p, i) => <Chip key={i} label={p.trim()} size="small" sx={{ mr: 0.5 }} variant="outlined" color="primary" />) : 'N/A' },
     { accessorKey: "feeCharged", header: "Cost", Cell: ({ cell }) => <Typography sx={{ fontWeight: 'bold', color: 'success.main' }}>${cell.getValue() || "0"}</Typography> },
@@ -294,7 +324,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         data={displayedClients}
         editDisplayMode="modal"
         enableEditing
-        state={{ globalFilter, columnFilters }} // Bind both filter states
+        state={{ globalFilter, columnFilters }}
         onGlobalFilterChange={setGlobalFilter}
         onColumnFiltersChange={setColumnFilters}
         renderTopToolbarCustomActions={({ table }) => (
@@ -310,7 +340,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
             <Tooltip title="Parking Permit"><IconButton onClick={() => handlePrintPermit(row.original)} color="error"><ParkingIcon /></IconButton></Tooltip>
             <Tooltip title="Monthly Receipt"><IconButton onClick={() => handlePrintReceipt(row.original)} color="primary"><PdfIcon /></IconButton></Tooltip>
             <Tooltip title="Payment History"><IconButton onClick={() => handlePrintHistory(row.original)} color="info"><HistoryIcon /></IconButton></Tooltip>
-            <Tooltip title="Edit"><IconButton onClick={() => {table.setEditingRow(row);}}><EditIcon /></IconButton></Tooltip>
+            <Tooltip title="Edit"><IconButton onClick={() => table.setEditingRow(row)}><EditIcon /></IconButton></Tooltip>
           </Stack>
         )}
         renderDetailPanel={({ row }) => {

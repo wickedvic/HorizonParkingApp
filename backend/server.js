@@ -61,12 +61,12 @@ app.get("/clients", async (req, res) => {
 });
 
 app.post("/clients", async (req, res) => {
-  const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, ccNum, ccExp, addedBy } = req.body;
+  const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp, addedBy } = req.body;
   try {
     const [result] = await pool.query(
-      `INSERT INTO People (First, Last, Address, City, ST, zip, \`Cell Phone\`, \`Permit #\`, \`Fee Charged\`, EmailAddr, Company, Status, CreditCardNum, CreditCardExpDate, AddedBy, AddedTS) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status || 'active', ccNum, ccExp, addedBy]
+      `INSERT INTO People (First, Last, Address, City, ST, zip, \`Cell Phone\`, \`Permit #\`, \`Fee Charged\`, EmailAddr, Company, Status, \`Client Type\`, CreditCardNum, CreditCardExpDate, AddedBy, AddedTS) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status || 'active', type || 'tenant', ccNum, ccExp, addedBy]
     );
     res.json({ success: true, id: result.insertId });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -74,11 +74,11 @@ app.post("/clients", async (req, res) => {
 
 app.put("/clients/:id", async (req, res) => {
   const { id } = req.params;
-  const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, ccNum, ccExp } = req.body;
+  const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp } = req.body;
   try {
     await pool.query(
-      `UPDATE People SET First = ?, Last = ?, Address = ?, City = ?, ST = ?, zip = ?, \`Cell Phone\` = ?, \`Permit #\` = ?, \`Fee Charged\` = ?, EmailAddr = ?, Company = ?, Status = ?, CreditCardNum = ?, CreditCardExpDate = ? WHERE PeopleID = ?`,
-      [firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, ccNum, ccExp, id]
+      `UPDATE People SET First = ?, Last = ?, Address = ?, City = ?, ST = ?, zip = ?, \`Cell Phone\` = ?, \`Permit #\` = ?, \`Fee Charged\` = ?, EmailAddr = ?, Company = ?, Status = ?, \`Client Type\` = ?, CreditCardNum = ?, CreditCardExpDate = ? WHERE PeopleID = ?`,
+      [firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp, id]
     );
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -121,33 +121,22 @@ app.get("/permits", async (req, res) => {
 app.post("/permits", async (req, res) => {
   const { user_name, start_date, end_date, added_by, permit_number } = req.body;
   try {
-    // Standardize AddedBy to 3-char varchar limit
     const shortAddedBy = (added_by || 'ADM').substring(0, 3).toUpperCase();
-    
-    // FIX: Generate a random ID manually for TempPermitID to ensure it is not null
     const manualID = Math.floor(100000 + Math.random() * 900000);
-
     const [result] = await pool.query(
       "INSERT INTO DailyPermit (TempPermitID, UserName, PermitDate, PermitStartDate, PermitEndDate, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, ?, NOW())",
       [manualID, user_name, permit_number, start_date, end_date, shortAddedBy]
     );
     res.json({ success: true, id: manualID });
-  } catch (err) { 
-    console.error("Permit Creation Error:", err.message);
-    res.status(500).json({ error: err.message }); 
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.delete("/permits/:id", async (req, res) => {
   try {
-    // Specifically target TempPermitID from the DESCRIBE schema
     const [result] = await pool.query("DELETE FROM DailyPermit WHERE TempPermitID = ?", [req.params.id]);
     if (result.affectedRows === 0) return res.status(404).json({ error: "Record not found" });
     res.json({ success: true });
-  } catch (err) { 
-    console.error("Delete Error:", err.message);
-    res.status(500).json({ error: err.message }); 
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // --- PAYMENTS & MASS PAYMENTS ---
