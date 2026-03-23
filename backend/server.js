@@ -30,9 +30,7 @@ app.post("/auth/login", async (req, res) => {
     const [rows] = await pool.query("SELECT * FROM users WHERE username = ? AND password = ?", [username, password]);
     if (rows.length === 0) return res.status(401).json({ error: "Invalid credentials" });
     res.json({ id: rows[0].id, username: rows[0].username, role: rows[0].role });
-  } catch (err) {
-    res.status(500).json({ error: "Database error" });
-  }
+  } catch (err) { res.status(500).json({ error: "Database error" }); }
 });
 
 // --- CLIENTS ---
@@ -66,9 +64,8 @@ app.post("/clients", async (req, res) => {
   const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, ccNum, ccExp, addedBy } = req.body;
   try {
     const [result] = await pool.query(
-      `INSERT INTO People 
-      (First, Last, Address, City, ST, zip, \`Cell Phone\`, \`Permit #\`, \`Fee Charged\`, EmailAddr, Company, Status, CreditCardNum, CreditCardExpDate, AddedBy, AddedTS) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      `INSERT INTO People (First, Last, Address, City, ST, zip, \`Cell Phone\`, \`Permit #\`, \`Fee Charged\`, EmailAddr, Company, Status, CreditCardNum, CreditCardExpDate, AddedBy, AddedTS) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status || 'active', ccNum, ccExp, addedBy]
     );
     res.json({ success: true, id: result.insertId });
@@ -87,20 +84,12 @@ app.put("/clients/:id", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- CARS (VEHICLES) ---
+// --- CARS ---
 app.get("/cars", async (req, res) => {
   try {
     const [rows] = await pool.query(`SELECT c.*, p.First as ownerFirst, p.Last as ownerLast FROM Cars c LEFT JOIN People p ON c.Owner = p.PeopleID`);
     const formattedCars = rows.map(car => ({
-      id: car['Car ID#'],
-      make: car['Car Make'],
-      model: car.Model,
-      color: car.Color,
-      year: car.Year,
-      license_plate: car.License,
-      owner_id: car.Owner,
-      owner_first: car.ownerFirst,
-      owner_last: car.ownerLast
+      id: car['Car ID#'], make: car['Car Make'], model: car.Model, color: car.Color, year: car.Year, license_plate: car.License, owner_id: car.Owner, owner_first: car.ownerFirst, owner_last: car.ownerLast
     }));
     res.json(formattedCars);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -111,15 +100,6 @@ app.post("/cars", async (req, res) => {
   try {
     const [result] = await pool.query(`INSERT INTO Cars (\`Car Make\`, Model, Color, Year, License, Owner, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`, [make, model, color, year, license_plate, owner_id, addedBy || 'Admin']);
     res.json({ success: true, id: result.insertId });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.put("/cars/:id", async (req, res) => {
-  const { id } = req.params;
-  const { make, model, color, year, license_plate, owner_id } = req.body;
-  try {
-    await pool.query(`UPDATE Cars SET \`Car Make\` = ?, Model = ?, Color = ?, Year = ?, License = ?, Owner = ? WHERE \`Car ID#\` = ?`, [make, model, color, year, license_plate, owner_id, id]);
-    res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -151,11 +131,11 @@ app.post("/process-mass-payment", async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     await connection.rollback();
-    res.status(500).json({ error: "Failed to process mass payment: " + err.message });
+    res.status(500).json({ error: err.message });
   } finally { connection.release(); }
 });
 
-// --- DAILY PERMITS (TEMPORARY) ---
+// --- DAILY PERMITS ---
 app.get("/permits", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM DailyPermit ORDER BY AddedTS DESC");
@@ -166,12 +146,16 @@ app.get("/permits", async (req, res) => {
 app.post("/permits", async (req, res) => {
   const { user_name, start_date, end_date, added_by, permit_number } = req.body;
   try {
+    // Mapping permit_number to PermitDate column as it is the only generic text field available for string IDs
     const [result] = await pool.query(
-      "INSERT INTO DailyPermit (UserName, PermitStartDate, PermitEndDate, AddedBy, AddedTS, PermitNumber) VALUES (?, ?, ?, ?, NOW(), ?)",
-      [user_name, start_date, end_date, added_by, permit_number]
+      "INSERT INTO DailyPermit (UserName, PermitDate, PermitStartDate, PermitEndDate, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, NOW())",
+      [user_name, permit_number, start_date, end_date, added_by.substring(0, 3)]
     );
-    res.json({ id: result.insertId, ...req.body });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    res.json({ success: true, id: result.insertId });
+  } catch (err) { 
+    console.error("DB Error:", err.message);
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
 app.delete("/permits/:id", async (req, res) => {

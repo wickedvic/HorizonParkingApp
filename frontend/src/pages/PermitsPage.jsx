@@ -29,7 +29,8 @@ export default function PermitsPage({ user, initialFilter }) {
     user_name: "",
     start_date: new Date().toISOString().split("T")[0],
     end_date: new Date().toISOString().split("T")[0],
-    added_by: user?.username || "Admin"
+    // Schema limit is 3 chars, so we take initials or first 3 letters
+    added_by: user?.username?.substring(0, 3).toUpperCase() || "ADM"
   })
 
   useEffect(() => { setGlobalFilter(initialFilter || ""); }, [initialFilter])
@@ -53,7 +54,7 @@ export default function PermitsPage({ user, initialFilter }) {
 
   const handleAddPermit = async (e) => {
     e.preventDefault()
-    // Auto-generate a permit number
+    // Auto-generate a permit number to store in 'PermitDate' column
     const generatedPermitNum = `T-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     const payload = { ...formData, permit_number: generatedPermitNum };
 
@@ -67,6 +68,9 @@ export default function PermitsPage({ user, initialFilter }) {
         loadPermits()
         setShowForm(false)
         setFormData({ ...formData, user_name: "" })
+      } else {
+        const errorData = await res.json();
+        alert(`Error: ${errorData.error || 'Server error'}`);
       }
     } catch (err) { console.error(err) }
   }
@@ -93,13 +97,10 @@ export default function PermitsPage({ user, initialFilter }) {
           </style>
         </head>
         <body>
-          <div class="header">
-            <div class="logo">H</div>
-            <div style="font-size: 32px; font-weight: bold;">2020 Partners, LLC</div>
-          </div>
+          <div class="header"><div class="logo">H</div><div style="font-size: 32px; font-weight: bold;">2020 Partners, LLC</div></div>
           <h1>Parking Permit</h1>
           <div class="address">20 Jerusalem Ave<br/>Hicksville, NY</div>
-          <div class="permit-label">Permit #: ${permit.PermitNumber || 'TEMP'}</div>
+          <div class="permit-label">Permit #: ${permit.PermitDate || 'TEMP'}</div>
           <div class="date-highlight">${monthYear}</div>
           <div style="text-align:left; font-size: 20px; margin-top: 20px;">
             Valid For: <strong>${permit.UserName}</strong><br/>
@@ -127,12 +128,12 @@ export default function PermitsPage({ user, initialFilter }) {
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     const dateObj = new Date(dateString);
-    if (isNaN(dateObj.getTime())) return "Invalid Date";
+    if (isNaN(dateObj.getTime())) return "Invalid";
     return dateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   const columns = useMemo(() => [
-    { accessorKey: "PermitNumber", header: "Permit #", size: 100 },
+    { accessorKey: "PermitDate", header: "Permit #", size: 120 },
     { accessorKey: "UserName", header: "Name" },
     { accessorKey: "PermitStartDate", header: "Start", Cell: ({ cell }) => formatDate(cell.getValue()) },
     { accessorKey: "PermitEndDate", header: "End", Cell: ({ cell }) => formatDate(cell.getValue()) },
@@ -158,26 +159,9 @@ export default function PermitsPage({ user, initialFilter }) {
           <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>Issue New Temporary Permit</Typography>
           <form onSubmit={handleAddPermit}>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <TextField
-                label="Full Name" variant="outlined" size="small" fullWidth
-                value={formData.user_name}
-                onChange={(e) => setFormData({ ...formData, user_name: e.target.value })}
-                required
-              />
-              <TextField
-                label="Valid From" type="date" variant="outlined" size="small" fullWidth
-                InputLabelProps={{ shrink: true }}
-                value={formData.start_date}
-                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                required
-              />
-              <TextField
-                label="Valid Until" type="date" variant="outlined" size="small" fullWidth
-                InputLabelProps={{ shrink: true }}
-                value={formData.end_date}
-                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                required
-              />
+              <TextField label="Full Name" variant="outlined" size="small" fullWidth value={formData.user_name} onChange={(e) => setFormData({ ...formData, user_name: e.target.value })} required />
+              <TextField label="Valid From" type="date" variant="outlined" size="small" fullWidth InputLabelProps={{ shrink: true }} value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} required />
+              <TextField label="Valid Until" type="date" variant="outlined" size="small" fullWidth InputLabelProps={{ shrink: true }} value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} required />
               <Button type="submit" variant="contained" sx={{ px: 4 }}>Create</Button>
             </Stack>
           </form>
@@ -187,7 +171,7 @@ export default function PermitsPage({ user, initialFilter }) {
       <Paper sx={{ p: 2, mb: 3, bgcolor: '#f8f9fa', border: '1px solid #e0e0e0' }}>
         <Stack direction="row" spacing={2} alignItems="center">
           <FilterIcon color="action" />
-          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Date Filter:</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Filter:</Typography>
           <TextField type="date" size="small" value={dateRange.start} onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })} />
           <TextField type="date" size="small" value={dateRange.end} onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })} />
           <Button size="small" onClick={() => setDateRange({ start: firstDay, end: lastDay })}>Current Month</Button>
@@ -202,16 +186,8 @@ export default function PermitsPage({ user, initialFilter }) {
         enableRowActions
         renderRowActions={({ row }) => (
           <Box sx={{ display: 'flex', gap: '0.5rem' }}>
-            <Tooltip title="Print Permit">
-              <IconButton onClick={() => handlePrintPermit(row.original)} color="primary">
-                <PrintIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Delete Record">
-              <IconButton onClick={() => handleDeletePermit(row.original.TempPermitID)} color="error">
-                <DeleteIcon />
-              </IconButton>
-            </Tooltip>
+            <Tooltip title="Print Permit"><IconButton onClick={() => handlePrintPermit(row.original)} color="primary"><PrintIcon /></IconButton></Tooltip>
+            <Tooltip title="Delete"><IconButton onClick={() => handleDeletePermit(row.original.TempPermitID)} color="error"><DeleteIcon /></IconButton></Tooltip>
           </Box>
         )}
         initialState={{ density: 'compact' }}
