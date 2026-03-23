@@ -31,7 +31,7 @@ import "./Dashboard.css"
 
 export default function Dashboard({ user, onLogout }) {
   const [currentPage, setCurrentPage] = useState("dashboard")
-  const [stats, setStats] = useState({ activeClients: 0, activePermits: 0 })
+  const [stats, setStats] = useState({ activeClients: 0, activePermits: 0, activeCars: 0 })
   const [globalSearch, setGlobalSearch] = useState("") 
   
   const [rawData, setRawData] = useState({ clients: [], cars: [] })
@@ -55,8 +55,17 @@ export default function Dashboard({ user, onLogout }) {
       const cars = await carsRes.json()
       const permits = await permitsRes.json()
 
+      // Calculate Active counts
       const activeClientsCount = Array.isArray(clients) 
         ? clients.filter(c => c.status?.toLowerCase() === 'active').length 
+        : 0;
+      
+      // Calculate Active Cars (Car owner must be active)
+      const activeCarsCount = Array.isArray(cars) && Array.isArray(clients)
+        ? cars.filter(car => {
+            const owner = clients.find(c => c.id == car.owner_id);
+            return owner?.status?.toLowerCase() === 'active';
+          }).length
         : 0;
       
       const today = new Date().toISOString().split('T')[0];
@@ -68,6 +77,7 @@ export default function Dashboard({ user, onLogout }) {
       setStats({
         activeClients: activeClientsCount,
         activePermits: activePermitsCount,
+        activeCars: activeCarsCount,
       })
     } catch (err) { console.error("Stats load failed:", err) }
   }
@@ -108,7 +118,6 @@ export default function Dashboard({ user, onLogout }) {
   };
 
   const handleNavigateToClients = (ownerIdOrQuery) => {
-    // FIX: If it's a numeric ID (from dropdown), pass it as an object for exact filtering
     if (typeof ownerIdOrQuery === 'number') {
       setInitialClientFilter({ id: ownerIdOrQuery });
     } else {
@@ -151,17 +160,28 @@ export default function Dashboard({ user, onLogout }) {
         {currentPage === "dashboard" && (
           <div className="animate-fade-in">
             <h2 className="page-title">Dashboard Overview</h2>
+            
             <Paper elevation={0} sx={{ p: '24px', mb: '30px', borderRadius: '16px', border: '1px solid #eef2f6', background: '#fff', position: 'relative', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
                 <Typography variant="h6" sx={{ mb: 3, fontWeight: 700, color: '#1a2027' }}>Quick System Check</Typography>
-                <Stack direction="row" spacing={4} sx={{ mb: 4 }}>
+                
+                {/* --- UPDATED STATS SECTION WITH ACTIVE CARS --- */}
+                <Stack direction="row" spacing={4} sx={{ mb: 4 }} divider={<Divider orientation="vertical" flexItem />}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(25, 118, 210, 0.08)' }}><PeopleIcon color="primary" /></Box>
                         <Box>
                             <Typography variant="h4" sx={{ fontWeight: 800, color: '#1976d2', lineHeight: 1 }}>{stats.activeClients}</Typography>
-                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}>Total Active Clients</Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}>Active Clients</Typography>
                         </Box>
                     </Box>
-                    <Divider orientation="vertical" flexItem />
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(237, 108, 2, 0.08)' }}><CarIcon sx={{ color: '#ed6c02' }} /></Box>
+                        <Box>
+                            <Typography variant="h4" sx={{ fontWeight: 800, color: '#ed6c02', lineHeight: 1 }}>{stats.activeCars}</Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}>Active Vehicles</Typography>
+                        </Box>
+                    </Box>
+
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(46, 125, 50, 0.08)' }}><VerifiedIcon color="success" /></Box>
                         <Box>
