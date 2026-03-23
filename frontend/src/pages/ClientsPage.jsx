@@ -253,10 +253,10 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
           { label: 'Employee', value: 'Employee' },
           { label: 'Payer', value: 'Payer' }
         ],
-        // FIX: Ensure correct data mapping for Type dropdown
         muiEditTextFieldProps: ({ row }) => ({
           select: true,
-          defaultValue: row?.original?.type || 'Tenant', 
+          // Using value instead of defaultValue to force synchronization
+          value: row?.original?.type || 'Tenant', 
         }),
         Cell: ({ cell }) => <Chip label={cell.getValue()} variant="outlined" size="small" />
     },
@@ -268,10 +268,10 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         { label: 'Active', value: 'active' }, 
         { label: 'Inactive', value: 'inactive' }
       ],
-      // FIX: Force dropdown to select current row value by converting to lowercase to match keys
+      // FIX: Use both select: true and value to ensure strict lowercase matching
       muiEditTextFieldProps: ({ row }) => ({
         select: true,
-        defaultValue: row?.original?.status?.toLowerCase() || 'active', 
+        value: row?.original?.status?.toLowerCase() === 'active' ? 'active' : 'inactive', 
       }),
       Cell: ({ cell }) => (
         <Chip 
