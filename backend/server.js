@@ -121,6 +121,7 @@ app.get("/permits", async (req, res) => {
 app.post("/permits", async (req, res) => {
   const { user_name, start_date, end_date, added_by, permit_number } = req.body;
   try {
+    // Schema limits AddedBy to varchar(3). ensure we don't overflow.
     const shortAddedBy = (added_by || 'ADM').substring(0, 3).toUpperCase();
     const [result] = await pool.query(
       "INSERT INTO DailyPermit (UserName, PermitDate, PermitStartDate, PermitEndDate, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, NOW())",
@@ -134,7 +135,7 @@ app.post("/permits", async (req, res) => {
 
 app.delete("/permits/:id", async (req, res) => {
   try {
-    // Specifically target TempPermitID as shown in your schema
+    // Specifically target TempPermitID as shown in your DESCRIBE output
     await pool.query("DELETE FROM DailyPermit WHERE TempPermitID = ?", [req.params.id]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }

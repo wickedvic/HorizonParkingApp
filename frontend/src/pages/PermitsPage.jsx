@@ -44,6 +44,7 @@ export default function PermitsPage({ user, initialFilter }) {
   }
 
   const handleDeletePermit = async (tempPermitId) => {
+    // FIX: Verify the ID is present before attempting delete
     if (!tempPermitId) {
       alert("Error: Record ID is missing.");
       return;
@@ -67,7 +68,7 @@ export default function PermitsPage({ user, initialFilter }) {
   };
 
   const handlePrintPermit = (permit) => {
-    // Range text for the big heading
+    // FIX: Range text for the big heading as requested
     const rangeHeader = `${formatDate(permit.PermitStartDate)} - ${formatDate(permit.PermitEndDate)}`;
     
     const printWindow = window.open('', '_blank');
@@ -117,7 +118,6 @@ export default function PermitsPage({ user, initialFilter }) {
         body: JSON.stringify(payload),
       })
       if (res.ok) {
-        // Preparation for auto-print
         const newPermitPrintData = {
           UserName: formData.user_name,
           PermitStartDate: formData.start_date,
@@ -129,7 +129,7 @@ export default function PermitsPage({ user, initialFilter }) {
         setShowForm(false)
         setFormData({ ...formData, user_name: "" })
         
-        // Auto-open PDF
+        // Auto-open PDF immediately upon creation
         handlePrintPermit(newPermitPrintData);
       } else {
         const errorData = await res.json();
@@ -149,6 +149,8 @@ export default function PermitsPage({ user, initialFilter }) {
   }, [permits, dateRange]);
 
   const columns = useMemo(() => [
+    // Added TempPermitID to columns but kept it hidden so row actions can find it
+    { accessorKey: "TempPermitID", header: "ID", size: 50 },
     { accessorKey: "PermitDate", header: "Permit #", size: 120 },
     { accessorKey: "UserName", header: "Name" },
     { accessorKey: "PermitStartDate", header: "Start", Cell: ({ cell }) => formatDate(cell.getValue()) },
@@ -200,13 +202,16 @@ export default function PermitsPage({ user, initialFilter }) {
         state={{ globalFilter }}
         onGlobalFilterChange={setGlobalFilter}
         enableRowActions
+        initialState={{ 
+            density: 'compact',
+            columnVisibility: { TempPermitID: false } // Hides ID column from UI but keeps data accessible
+        }}
         renderRowActions={({ row }) => (
           <Box sx={{ display: 'flex', gap: '0.5rem' }}>
             <Tooltip title="Print Permit"><IconButton onClick={() => handlePrintPermit(row.original)} color="primary"><PrintIcon /></IconButton></Tooltip>
             <Tooltip title="Delete"><IconButton onClick={() => handleDeletePermit(row.original.TempPermitID)} color="error"><DeleteIcon /></IconButton></Tooltip>
           </Box>
         )}
-        initialState={{ density: 'compact' }}
         muiTablePaperProps={{ elevation: 2, sx: { borderRadius: '12px' } }}
       />
     </Box>
