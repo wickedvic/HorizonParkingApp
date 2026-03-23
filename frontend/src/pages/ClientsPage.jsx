@@ -22,7 +22,6 @@ import {
 import { MaterialReactTable } from 'material-react-table';
 import { mkConfig, generateCsv, download } from 'export-to-csv'; 
 
-// --- CSV CONFIGURATION ---
 const csvConfigBase = {
   fieldSeparator: ',',
   decimalSeparator: '.',
@@ -34,13 +33,27 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const [allCars, setAllCars] = useState([]);
   const [payments, setPayments] = useState([]);
   const [statusFilter, setStatusFilter] = useState("active");
-  const [globalFilter, setGlobalFilter] = useState(initialFilter || "");
+  
+  // NEW: Split filter state to handle targeted searches
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [columnFilters, setColumnFilters] = useState([]);
 
   useEffect(() => {
     loadClients(); loadAllCars(); loadPayments();
   }, []);
 
-  useEffect(() => { setGlobalFilter(initialFilter || ""); }, [initialFilter]);
+  // FIX: Targeted Filtering Logic
+  useEffect(() => {
+    if (initialFilter && typeof initialFilter === 'object' && initialFilter.id) {
+      // It's a targeted ID search from Dashboard results
+      setGlobalFilter("");
+      setColumnFilters([{ id: 'id', value: initialFilter.id.toString() }]);
+    } else {
+      // It's a broad text search (Name or Permit #) from search bar
+      setGlobalFilter(initialFilter || "");
+      setColumnFilters([]);
+    }
+  }, [initialFilter]);
 
   const loadClients = async () => {
     try {
@@ -79,11 +92,10 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     download(config)(csv);
   };
 
-  // --- PDF GENERATION LOGIC ---
+  // --- PDF Logic ---
   const handlePrintPermit = (client) => {
     const clientVehicles = allCars.filter(car => car.owner_id == client.id);
     const monthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-    
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
       <html>
@@ -241,45 +253,24 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const displayedClients = useMemo(() => clients.filter(c => c.status?.toLowerCase() === statusFilter.toLowerCase()), [clients, statusFilter]);
 
   const columns = useMemo(() => [
-    { accessorKey: "id", header: "ID", enableEditing: false, size: 80 },
+    { accessorKey: "id", header: "ID", enableEditing: false, size: 80, filterFn: 'equals' }, // Exact filter for ID
     { accessorKey: "firstName", header: "First Name", muiEditTextFieldProps: { required: true } },
     { accessorKey: "lastName", header: "Last Name", muiEditTextFieldProps: { required: true } },
     { 
         accessorKey: "type", 
         header: "Type", 
         editVariant: 'select', 
-        editSelectOptions: [
-          { label: 'Tenant', value: 'Tenant' }, 
-          { label: 'Employee', value: 'Employee' },
-          { label: 'Payer', value: 'Payer' }
-        ],
-        muiEditTextFieldProps: ({ row }) => ({
-          select: true,
-          // Using value instead of defaultValue to force synchronization
-          value: row?.original?.type || 'Tenant', 
-        }),
+        editSelectOptions: [{ label: 'Tenant', value: 'Tenant' }, { label: 'Employee', value: 'Employee' }, { label: 'Payer', value: 'Payer' }],
+        muiEditTextFieldProps: ({ row }) => ({ select: true, value: row?.original?.type || 'Tenant' }),
         Cell: ({ cell }) => <Chip label={cell.getValue()} variant="outlined" size="small" />
     },
     { 
       accessorKey: "status", 
       header: "Status", 
       editVariant: 'select', 
-      editSelectOptions: [
-        { label: 'Active', value: 'active' }, 
-        { label: 'Inactive', value: 'inactive' }
-      ],
-      // FIX: Use both select: true and value to ensure strict lowercase matching
-      muiEditTextFieldProps: ({ row }) => ({
-        select: true,
-        value: row?.original?.status?.toLowerCase() === 'active' ? 'active' : 'inactive', 
-      }),
-      Cell: ({ cell }) => (
-        <Chip 
-          label={cell.getValue()?.toUpperCase()} 
-          color={cell.getValue()?.toLowerCase() === 'active' ? 'success' : 'default'} 
-          size="small" 
-        />
-      )
+      editSelectOptions: [{ label: 'Active', value: 'active' }, { label: 'Inactive', value: 'inactive' }],
+      muiEditTextFieldProps: ({ row }) => ({ select: true, value: row?.original?.status?.toLowerCase() === 'active' ? 'active' : 'inactive' }),
+      Cell: ({ cell }) => <Chip label={cell.getValue()?.toUpperCase()} color={cell.getValue()?.toLowerCase() === 'active' ? 'success' : 'default'} size="small" />
     },
     { accessorKey: "permitNumber", header: "Permit #", Cell: ({ cell }) => cell.getValue() ? cell.getValue().split(',').map((p, i) => <Chip key={i} label={p.trim()} size="small" sx={{ mr: 0.5 }} variant="outlined" color="primary" />) : 'N/A' },
     { accessorKey: "feeCharged", header: "Cost", Cell: ({ cell }) => <Typography sx={{ fontWeight: 'bold', color: 'success.main' }}>${cell.getValue() || "0"}</Typography> },
@@ -303,10 +294,9 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         data={displayedClients}
         editDisplayMode="modal"
         enableEditing
-        onEditingRowSave={handleSaveClient}
-        onCreatingRowSave={handleCreateClient}
-        state={{ globalFilter }}
+        state={{ globalFilter, columnFilters }} // Bind both filter states
         onGlobalFilterChange={setGlobalFilter}
+        onColumnFiltersChange={setColumnFilters}
         renderTopToolbarCustomActions={({ table }) => (
           <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>Add Client</Button>
