@@ -84,7 +84,7 @@ app.put("/clients/:id", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- CARS ---
+// --- CARS (VEHICLES) ---
 app.get("/cars", async (req, res) => {
   try {
     const [rows] = await pool.query(`SELECT c.*, p.First as ownerFirst, p.Last as ownerLast FROM Cars c LEFT JOIN People p ON c.Owner = p.PeopleID`);
@@ -121,9 +121,10 @@ app.get("/permits", async (req, res) => {
 app.post("/permits", async (req, res) => {
   const { user_name, start_date, end_date, added_by, permit_number } = req.body;
   try {
+    const shortAddedBy = (added_by || 'ADM').substring(0, 3).toUpperCase();
     const [result] = await pool.query(
       "INSERT INTO DailyPermit (UserName, PermitDate, PermitStartDate, PermitEndDate, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, NOW())",
-      [user_name, permit_number, start_date, end_date, added_by.substring(0, 3)]
+      [user_name, permit_number, start_date, end_date, shortAddedBy]
     );
     res.json({ success: true, id: result.insertId });
   } catch (err) { 

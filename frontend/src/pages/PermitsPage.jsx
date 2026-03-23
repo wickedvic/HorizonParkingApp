@@ -44,11 +44,18 @@ export default function PermitsPage({ user, initialFilter }) {
   }
 
   const handleDeletePermit = async (tempPermitId) => {
+    if (!tempPermitId) {
+      alert("Error: Record ID is missing.");
+      return;
+    }
     if (!window.confirm("Are you sure you want to delete this permit record?")) return;
     try {
-      // Corrected parameter to use the actual database ID
       const res = await fetch(`${API_BASE_URL}/permits/${tempPermitId}`, { method: "DELETE" });
-      if (res.ok) loadPermits();
+      if (res.ok) {
+        loadPermits();
+      } else {
+        alert("Failed to delete from server.");
+      }
     } catch (err) { console.error(err); }
   }
 
@@ -60,8 +67,8 @@ export default function PermitsPage({ user, initialFilter }) {
   };
 
   const handlePrintPermit = (permit) => {
-    // Generate formatted date range for the heading
-    const rangeText = `${formatDate(permit.PermitStartDate)} - ${formatDate(permit.PermitEndDate)}`;
+    // Range text for the big heading
+    const rangeHeader = `${formatDate(permit.PermitStartDate)} - ${formatDate(permit.PermitEndDate)}`;
     
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
@@ -75,7 +82,7 @@ export default function PermitsPage({ user, initialFilter }) {
             h1 { font-size: 72px; color: #d32f2f; margin: 20px 0; font-weight: bold; }
             .address { font-size: 22px; margin-bottom: 30px; font-weight: bold; }
             .permit-label { font-size: 40px; font-weight: bold; text-decoration: underline; }
-            .date-highlight { font-size: 48px; color: #d32f2f; font-weight: bold; margin: 30px 0; }
+            .date-highlight { font-size: 44px; color: #d32f2f; font-weight: bold; margin: 30px 0; border: 2px solid #d32f2f; padding: 10px; display: inline-block; }
             .signature { margin-top: 100px; text-align: right; font-size: 24px; color: #d32f2f; }
             .footer-info { margin-top: 60px; font-size: 18px; font-weight: bold; }
           </style>
@@ -85,8 +92,8 @@ export default function PermitsPage({ user, initialFilter }) {
           <h1>Parking Permit</h1>
           <div class="address">20 Jerusalem Ave<br/>Hicksville, NY</div>
           <div class="permit-label">Permit #: ${permit.PermitDate || 'TEMP'}</div>
-          <div class="date-highlight">${rangeText}</div>
-          <div style="text-align:left; font-size: 20px; margin-top: 20px;">
+          <div class="date-highlight">${rangeHeader}</div>
+          <div style="text-align:left; font-size: 24px; margin-top: 40px;">
             Valid For: <strong>${permit.UserName}</strong>
           </div>
           <div class="signature">X __________________________________________</div>
@@ -110,8 +117,8 @@ export default function PermitsPage({ user, initialFilter }) {
         body: JSON.stringify(payload),
       })
       if (res.ok) {
-        // Prepare data for printing based on what was just created
-        const newPermitData = {
+        // Preparation for auto-print
+        const newPermitPrintData = {
           UserName: formData.user_name,
           PermitStartDate: formData.start_date,
           PermitEndDate: formData.end_date,
@@ -122,8 +129,8 @@ export default function PermitsPage({ user, initialFilter }) {
         setShowForm(false)
         setFormData({ ...formData, user_name: "" })
         
-        // Auto-open PDF after successful creation
-        handlePrintPermit(newPermitData);
+        // Auto-open PDF
+        handlePrintPermit(newPermitPrintData);
       } else {
         const errorData = await res.json();
         alert(`Error: ${errorData.error || 'Server error'}`);
