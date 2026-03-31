@@ -226,14 +226,13 @@ export default function ClientsPage({ user, initialFilter }) {
       const activeClients = clients.filter(c => normalize(c.status) === 'active');
       const res = await fetch(`${API_BASE_URL}/process-mass-payment`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ month: currentMonth, clients: activeClients, addedBy: user?.username }),
+        body: JSON.stringify({ month: currentMonth, clients: activeClients, addedBy: (user?.username || 'ADM').substring(0, 3) }),
       });
       if (res.ok) { alert("Payments processed."); loadPayments(); }
     } catch (err) { console.error(err); }
   };
 
   const handleCreateClient = async ({ values, table }) => {
-    // Fill all missing keys with empty strings to satisfy database constraints
     const payload = { 
         firstName: values.firstName || "",
         lastName: values.lastName || "",
@@ -250,7 +249,8 @@ export default function ClientsPage({ user, initialFilter }) {
         type: normalize(values.type || 'tenant'),
         ccNum: "",
         ccExp: "",
-        addedBy: user?.username || 'Sys' 
+        // Truncate to 3 characters to match database VARCHAR(3)
+        addedBy: (user?.username || 'ADM').substring(0, 3).toUpperCase() 
     };
     try {
       const res = await fetch(`${API_BASE_URL}/clients`, {
@@ -353,7 +353,6 @@ export default function ClientsPage({ user, initialFilter }) {
         state={{ globalFilter, columnFilters }}
         onGlobalFilterChange={setGlobalFilter}
         onColumnFiltersChange={setColumnFilters}
-        // CLEAN LOCALIZATION FOR TITLES - Maintains original CSS
         localization={{
             createRowModalTitle: 'Add New Client',
             editRowModalTitle: 'Edit Client',
@@ -362,7 +361,7 @@ export default function ClientsPage({ user, initialFilter }) {
           <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>Add New Client</Button>
             <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
-            <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
+            <Button startIcon={<FileDownloadIcon />} onClick={handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
             <Button startIcon={<FileDownloadIcon />} onClick={handleExportAll} variant="outlined" size="small">Export All</Button>
           </Box>
         )}
