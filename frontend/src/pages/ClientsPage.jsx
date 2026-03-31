@@ -271,13 +271,13 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         status: normalize(values.status),
         type: values.type
     };
-    console.log("PAYLOAD SAVE", payload) 
+   
     try {
       const res = await fetch(`${API_BASE_URL}/clients/${row.original.id}`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (res.ok) { loadClients(); table.setEditingRow(null);}
+      if (res.ok) { loadClients(); table.setEditingRow(null);  console.log("PAYLOAD SAVE", payload) }
     } catch (err) { console.error(err); }
   };
 
