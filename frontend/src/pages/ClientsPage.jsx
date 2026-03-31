@@ -233,12 +233,23 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   };
 
   const handleCreateClient = async ({ values, table }) => {
+    // PASS EMPTY STRINGS FOR ALL VALUES NOT COLLECTED IN THE UI TO AVOID 500 ERRORS
     const payload = { 
-        ...values, 
+        firstName: values.firstName || "",
+        lastName: values.lastName || "",
+        address: "",
+        city: "",
+        state: "",
+        zip: "",
+        phone: "",
         permitNumber: values.permitNumber || `P-${Math.floor(1000 + Math.random() * 9000)}`, 
         feeCharged: values.feeCharged || "120", 
+        email: "",
+        company: "",
         status: normalize(values.status || 'active'), 
-        type: normalize(values.type || 'tenant'),
+        type: values.type || 'tenant',
+        ccNum: "",
+        ccExp: "",
         addedBy: user?.username || 'Sys' 
     };
     try {
@@ -247,6 +258,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         body: JSON.stringify(payload),
       });
       if (res.ok) { loadClients(); table.setCreatingRow(null); }
+      else { alert("Server Error while adding client."); }
     } catch (err) { console.error(err); }
   };
 
