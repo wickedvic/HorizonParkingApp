@@ -229,7 +229,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         permitNumber: values.permitNumber || `P-${Math.floor(1000 + Math.random() * 9000)}`, 
         feeCharged: values.feeCharged || "120", 
         status: normalize(values.status || 'active'), 
-        type: normalize(values.type || 'tenant'), // FIXED: normalize type
+        type: normalize(values.type || 'tenant'),
         addedBy: user?.username || 'Sys' 
     };
     try {
@@ -245,7 +245,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     const payload = { 
         ...values, 
         status: normalize(values.status),
-        type: normalize(values.type)
+        type: values.type
     };
     try {
       const res = await fetch(`${API_BASE_URL}/clients/${row.original.id}`, {
@@ -273,8 +273,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         ],
         muiEditTextFieldProps: ({ row }) => ({
           select: true,
-          // FIXED: Use defaultValue so options remain selectable
-          defaultValue: normalize(row?.original?.type || 'tenant'), 
+          defaultValue: row?.original?.type || 'tenant', 
         }),
         Cell: ({ cell }) => <Chip label={cell.getValue()?.charAt(0).toUpperCase() + cell.getValue()?.slice(1)} variant="outlined" size="small" />
     },
@@ -288,7 +287,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       ],
       muiEditTextFieldProps: ({ row }) => ({
         select: true,
-        // FIXED: Use defaultValue so options remain selectable
         defaultValue: normalize(row?.original?.status || 'active'), 
       }),
       Cell: ({ cell }) => (
@@ -326,9 +324,19 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         state={{ globalFilter, columnFilters }}
         onGlobalFilterChange={setGlobalFilter}
         onColumnFiltersChange={setColumnFilters}
+        // FIX: Update labels so Add vs Edit titles are correct
+        renderCreateRowDialogContent={({ table, row, internalEditComponents }) => (
+            <>
+              <Typography variant="h5" sx={{ p: 3, pb: 0, fontWeight: 'bold' }}>Add New Client</Typography>
+              {internalEditComponents}
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 3, gap: 2 }}>
+                <Button onClick={() => table.setCreatingRow(null)}>Cancel</Button>
+                <Button variant="contained" onClick={() => table.handleSaveRow(row)}>Save</Button>
+              </Box>
+            </>
+        )}
         renderTopToolbarCustomActions={({ table }) => (
           <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            {/* FIXED LABEL TO "Add New Client" */}
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>Add New Client</Button>
             <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
             <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
