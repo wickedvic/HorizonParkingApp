@@ -12,6 +12,7 @@ import {
   Badge as PermitIcon, 
   Add as AddIcon, 
   Edit as EditIcon, 
+  Info as InfoIcon,
   PictureAsPdf as PdfIcon,
   Payments as CashIcon,
   History as HistoryIcon,
@@ -195,8 +196,16 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
             <div style="text-align:right;">Method of Payment: ${client.paymentType || 'Credit Card'}<br/>Monthly Fee: $${client.feeCharged || '0'}.00</div>
           </div>
           <div class="flex-container">
-            <div style="flex:1;"><table><thead><tr><th>Payment Month</th><th>Amount</th></tr></thead><tbody>${leftCol.map(p => `<tr><td>${p.month}</td><td>$${p.amount}.00</td></tr>`).join('')}</tbody></table></div>
-            <div style="flex:1;"><table><thead><tr><th>Payment Month</th><th>Amount</th></tr></thead><tbody>${rightCol.map(p => `<tr><td>${p.month}</td><td>$${p.amount}.00</td></tr>`).join('')}</tbody></table></div>
+            <div style="flex:1;">
+                <table><thead><tr><th>Payment Month</th><th>Amount</th></tr></thead>
+                <tbody>${leftCol.map(p => `<tr><td>${p.month}</td><td>$${p.amount}.00</td></tr>`).join('')}</tbody>
+                </table>
+            </div>
+            <div style="flex:1;">
+                <table><thead><tr><th>Payment Month</th><th>Amount</th></tr></thead>
+                <tbody>${rightCol.map(p => `<tr><td>${p.month}</td><td>$${p.amount}.00</td></tr>`).join('')}</tbody>
+                </table>
+            </div>
           </div>
           <script>window.print();</script>
         </body>
@@ -245,7 +254,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     const payload = { 
         ...values, 
         status: normalize(values.status),
-        type: values.type
+        type: normalize(values.type)
     };
     try {
       const res = await fetch(`${API_BASE_URL}/clients/${row.original.id}`, {
@@ -324,17 +333,10 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         state={{ globalFilter, columnFilters }}
         onGlobalFilterChange={setGlobalFilter}
         onColumnFiltersChange={setColumnFilters}
-        // FIX: Update labels so Add vs Edit titles are correct
-        renderCreateRowDialogContent={({ table, row, internalEditComponents }) => (
-            <>
-              <Typography variant="h5" sx={{ p: 3, pb: 0, fontWeight: 'bold' }}>Add New Client</Typography>
-              {internalEditComponents}
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 3, gap: 2 }}>
-                <Button onClick={() => table.setCreatingRow(null)}>Cancel</Button>
-                <Button variant="contained" onClick={() => table.handleSaveRow(row)}>Save</Button>
-              </Box>
-            </>
-        )}
+        localization={{
+            createRowModalTitle: 'Add New Client',
+            editRowModalTitle: 'Edit Client',
+        }}
         renderTopToolbarCustomActions={({ table }) => (
           <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>Add New Client</Button>
