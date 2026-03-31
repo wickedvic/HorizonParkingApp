@@ -57,10 +57,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     try {
       const res = await fetch(`${API_BASE_URL}/clients`);
       const data = await res.json();
-      // Ensure we are setting an array and filtering for valid objects
       setClients(Array.isArray(data) ? data.filter(row => row.id) : []);
-      console.log("Loaded clients:", data);
-      console.log("Filtered clients:", Array.isArray(data) ? data.filter(row => row.id) : []);
     } catch (err) { console.error(err); }
   };
 
@@ -239,20 +236,14 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     const payload = { 
         firstName: values.firstName || "",
         lastName: values.lastName || "",
-        address: "",
-        city: "",
-        state: "",
-        zip: "",
-        phone: "",
+        address: "", city: "", state: "", zip: "", phone: "",
         permitNumber: values.permitNumber || `P-${Math.floor(1000 + Math.random() * 9000)}`, 
         feeCharged: values.feeCharged || "120", 
-        email: "",
-        company: "",
+        email: "", company: "",
         status: normalize(values.status || 'active'), 
         type: normalize(values.type || 'tenant'),
-        ccNum: "",
-        ccExp: "",
-        // Truncate to match database VARCHAR(3)
+        ccNum: "", ccExp: "",
+        // Truncate to 3 chars for DB varchar(3) limit
         addedBy: (user?.username || 'ADM').substring(0, 3).toUpperCase() 
     };
     try {
@@ -262,7 +253,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         body: JSON.stringify(payload),
       });
       if (res.ok) { 
-        // FIX: Re-fetch clients to update table with the new ID from the DB
+        // FIX: Ensure ID is updated by awaiting the data reload
         await loadClients(); 
         table.setCreatingRow(null); 
       } else { 
@@ -280,8 +271,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     };
     try {
       const res = await fetch(`${API_BASE_URL}/clients/${row.original.id}`, {
-        method: "PUT", 
-        headers: { "Content-Type": "application/json" },
+        method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       if (res.ok) { 
@@ -366,22 +356,24 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
             createRowModalTitle: 'Add New Client',
             editRowModalTitle: 'Edit Client',
         }}
-        renderTopToolbarCustomActions={({ table }) => (
-          <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <Button 
-                variant="contained" 
-                startIcon={<AddIcon />} 
-                onClick={() => {
-                    if (table) table.setCreatingRow(true);
-                }}
-            >
-                Add New Client
-            </Button>
-            <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
-            <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
-            <Button startIcon={<FileDownloadIcon />} onClick={handleExportAll} variant="outlined" size="small">Export All</Button>
-          </Box>
-        )}
+        renderTopToolbarCustomActions={({ table }) => {
+          // Safety check to prevent standard initialization errors
+          if (!table) return null;
+          return (
+            <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <Button 
+                  variant="contained" 
+                  startIcon={<AddIcon />} 
+                  onClick={() => table.setCreatingRow(true)}
+              >
+                  Add New Client
+              </Button>
+              <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
+              <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
+              <Button startIcon={<FileDownloadIcon />} onClick={handleExportAll} variant="outlined" size="small">Export All</Button>
+            </Box>
+          );
+        }}
         renderRowActions={({ row, table }) => (
           <Stack direction="row" spacing={0.5}>
             <Tooltip title="Parking Permit"><IconButton onClick={() => handlePrintPermit(row.original)} color="error"><ParkingIcon /></IconButton></Tooltip>
