@@ -16,7 +16,6 @@ import {
 import { MaterialReactTable } from 'material-react-table';
 import { mkConfig, generateCsv, download } from 'export-to-csv';
 
-// --- CSV CONFIGURATION ---
 const csvConfigBase = {
   fieldSeparator: ',',
   decimalSeparator: '.',
@@ -26,7 +25,7 @@ const csvConfigBase = {
 export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   const [cars, setCars] = useState([]);
   const [clients, setClients] = useState([]); 
-  const [statusFilter, setStatusFilter] = useState("active"); // Tab state
+  const [statusFilter, setStatusFilter] = useState("active");
   const [globalFilter, setGlobalFilter] = useState(initialFilter || "");
 
   useEffect(() => { 
@@ -52,7 +51,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
     } catch (err) { console.error("Failed to load clients:", err); }
   };
 
-  // --- CSV EXPORT HANDLERS ---
   const handleExportByStatus = (status) => {
     const filteredData = cars.filter(car => {
       const owner = clients.find(c => c.id == car.owner_id);
@@ -107,7 +105,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
     }
   };
 
-  // Filter cars based on the Owner's status
   const displayedCars = useMemo(() => {
     return cars.filter(car => {
       const owner = clients.find(c => c.id == car.owner_id);
@@ -133,7 +130,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
     { accessorKey: "year", header: "Year" },
     { accessorKey: "color", header: "Color" },
     {
-      accessorKey: "owner_id",
+      accessorKey: "owner_id", // Keep this as the key for editing/filtering
       header: "Owner",
       editVariant: 'select',
       editSelectOptions: clients.map(c => ({
@@ -144,11 +141,15 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         select: true,
         value: row?.original?.owner_id || "", 
       }),
-      accessorFn: (row) => `${row.owner_first || ''} ${row.owner_last || ''}`,
+      // Use accessorFn to concatenate name so SEARCH works on the full name string
+      accessorFn: (row) => `${row.owner_first || ''} ${row.owner_last || ''}`.trim(),
       id: "owner_name",
-      Cell: ({ row, renderedCellValue }) => {
-        // FIX: Ensure value is a string before calling .trim()
-        const cellValue = renderedCellValue?.toString() || "";
+      Cell: ({ row }) => {
+        // Concatenate manually inside Cell to ensure [object Object] never appears
+        const firstName = row.original.owner_first || "";
+        const lastName = row.original.owner_last || "";
+        const fullName = `${firstName} ${lastName}`.trim();
+        
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <PersonIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
@@ -156,9 +157,9 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
               component="button"
               variant="body2"
               sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }}
-              onClick={() => onNavigateClient(row.original.owner_last || "")}
+              onClick={() => onNavigateClient(lastName || "")}
             >
-              {cellValue.trim() !== "" ? cellValue : `ID: ${row.original.owner_id}`}
+              {fullName !== "" ? fullName : `ID: ${row.original.owner_id}`}
             </Link>
           </Box>
         );
