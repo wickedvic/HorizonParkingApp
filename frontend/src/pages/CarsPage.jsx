@@ -54,7 +54,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   // --- CSV EXPORT HANDLERS ---
   const handleExportByStatus = (status) => {
-    // FIX: Use loose equality (==) to handle String vs Number ID comparison
     const filteredData = cars.filter(car => {
       const owner = clients.find(c => c.id == car.owner_id);
       const ownerStatus = owner?.status?.toLowerCase() || "inactive";
@@ -111,7 +110,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   // Filter cars based on the Owner's status
   const displayedCars = useMemo(() => {
     return cars.filter(car => {
-      // FIX: Changed === to == to handle data type mismatches (String vs Number)
       const owner = clients.find(c => c.id == car.owner_id);
       const ownerStatus = owner?.status?.toLowerCase() || "inactive";
       return ownerStatus === statusFilter.toLowerCase();
@@ -126,7 +124,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       muiEditTextFieldProps: { required: true },
       Cell: ({ cell }) => (
         <Typography sx={{ fontWeight: 'bold', fontFamily: 'monospace' }}>
-          {cell.getValue()?.split('\r')[0]}
+          {cell.getValue()?.toString().split('\r')[0]}
         </Typography>
       )
     },
@@ -148,19 +146,23 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       }),
       accessorFn: (row) => `${row.owner_first || ''} ${row.owner_last || ''}`,
       id: "owner_name",
-      Cell: ({ row, renderedCellValue }) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <PersonIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-          <Link
-            component="button"
-            variant="body2"
-            sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }}
-            onClick={() => onNavigateClient(row.original.owner_last || "")}
-          >
-            {renderedCellValue && renderedCellValue.trim() !== "" ? renderedCellValue : `ID: ${row.original.owner_id}`}
-          </Link>
-        </Box>
-      ),
+      Cell: ({ row, renderedCellValue }) => {
+        // FIX: Ensure value is a string before calling .trim()
+        const cellValue = renderedCellValue?.toString() || "";
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <PersonIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+            <Link
+              component="button"
+              variant="body2"
+              sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }}
+              onClick={() => onNavigateClient(row.original.owner_last || "")}
+            >
+              {cellValue.trim() !== "" ? cellValue : `ID: ${row.original.owner_id}`}
+            </Link>
+          </Box>
+        );
+      },
     },
   ], [onNavigateClient, clients]);
 
