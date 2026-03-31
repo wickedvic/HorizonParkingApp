@@ -63,7 +63,7 @@ app.get("/clients", async (req, res) => {
 app.post("/clients", async (req, res) => {
   const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp, addedBy } = req.body;
   try {
-    // FIXED: Ensured 16 placeholders match the 16 variables provided
+    // Variables count matches the 16 placeholders + NOW()
     const [result] = await pool.query(
       `INSERT INTO People (First, Last, Address, City, ST, zip, \`Cell Phone\`, \`Permit #\`, \`Fee Charged\`, EmailAddr, Company, Status, \`Client Type\`, CreditCardNum, CreditCardExpDate, AddedBy, AddedTS) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
@@ -71,7 +71,7 @@ app.post("/clients", async (req, res) => {
     );
     res.json({ success: true, id: result.insertId });
   } catch (err) { 
-    console.error(err);
+    console.error("Client Creation Error:", err);
     res.status(500).json({ error: err.message }); 
   }
 });
@@ -125,8 +125,12 @@ app.get("/permits", async (req, res) => {
 app.post("/permits", async (req, res) => {
   const { user_name, start_date, end_date, added_by, permit_number } = req.body;
   try {
+    // Standardize AddedBy to 3-char varchar limit
     const shortAddedBy = (added_by || 'ADM').substring(0, 3).toUpperCase();
+    
+    // Generate a random ID manually for TempPermitID to ensure it is not null
     const manualID = Math.floor(100000 + Math.random() * 900000);
+
     const [result] = await pool.query(
       "INSERT INTO DailyPermit (TempPermitID, UserName, PermitDate, PermitStartDate, PermitEndDate, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, ?, NOW())",
       [manualID, user_name, permit_number, start_date, end_date, shortAddedBy]
@@ -140,6 +144,7 @@ app.post("/permits", async (req, res) => {
 
 app.delete("/permits/:id", async (req, res) => {
   try {
+    // Specifically target TempPermitID from the DESCRIBE schema
     const [result] = await pool.query("DELETE FROM DailyPermit WHERE TempPermitID = ?", [req.params.id]);
     if (result.affectedRows === 0) return res.status(404).json({ error: "Record not found" });
     res.json({ success: true });
