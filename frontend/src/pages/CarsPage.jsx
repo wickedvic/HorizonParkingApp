@@ -55,7 +55,12 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       const res = await fetch(`${API_BASE_URL}/cars`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, addedBy: user?.username }),
+        body: JSON.stringify({ 
+          ...values, 
+          owner_id: values.owner_id, // Explicitly pass owner_id
+          license_plate: values.license_plate, // Explicitly pass plate
+          addedBy: user?.username 
+        }),
       });
       if (res.ok) {
         await loadCars();
@@ -66,11 +71,20 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   const handleSaveCar = async ({ values, row, table }) => {
     try {
-      // Use row.original.id to ensure we are hitting the correct record
+      // Ensure we send owner_id and license_plate correctly to the backend
+      const payload = {
+        make: values.make,
+        model: values.model,
+        color: values.color,
+        year: values.year,
+        license_plate: values.license_plate,
+        owner_id: values.owner_id
+      };
+
       const res = await fetch(`${API_BASE_URL}/cars/${row.original.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         await loadCars();
@@ -112,7 +126,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       editSelectOptions: clients.map(c => ({ label: `${c.lastName}, ${c.firstName} (ID: ${c.id})`, value: c.id })),
       muiEditTextFieldProps: ({ row }) => ({
         select: true,
-        // CHANGED: Use defaultValue instead of value so the dropdown is actually selectable
         defaultValue: row?.original?.owner_id || "", 
       }),
       accessorFn: (row) => `${row.owner_first || ''} ${row.owner_last || ''}`.trim(),
