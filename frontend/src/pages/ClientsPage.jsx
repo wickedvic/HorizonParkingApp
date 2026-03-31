@@ -353,6 +353,7 @@ export default function ClientsPage({ user, initialFilter }) {
         state={{ globalFilter, columnFilters }}
         onGlobalFilterChange={setGlobalFilter}
         onColumnFiltersChange={setColumnFilters}
+        // CLEAN LOCALIZATION FOR TITLES - Maintains original CSS
         localization={{
             createRowModalTitle: 'Add New Client',
             editRowModalTitle: 'Edit Client',
