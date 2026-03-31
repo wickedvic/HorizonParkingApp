@@ -238,7 +238,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         permitNumber: values.permitNumber || `P-${Math.floor(1000 + Math.random() * 9000)}`, 
         feeCharged: values.feeCharged || "120", 
         status: normalize(values.status || 'active'), 
-        type: values.type || 'tenant',
+        type: normalize(values.type || 'tenant'),
         addedBy: user?.username || 'Sys' 
     };
     try {

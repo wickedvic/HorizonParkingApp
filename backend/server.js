@@ -63,7 +63,7 @@ app.get("/clients", async (req, res) => {
 app.post("/clients", async (req, res) => {
   const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp, addedBy } = req.body;
   try {
-    // FIX: Variable order matches SQL placeholders precisely
+    // Standardizing variables to match placeholders count and order precisely
     const [result] = await pool.query(
       `INSERT INTO People (First, Last, Address, City, ST, zip, \`Cell Phone\`, \`Permit #\`, \`Fee Charged\`, EmailAddr, Company, Status, \`Client Type\`, CreditCardNum, CreditCardExpDate, AddedBy, AddedTS) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
@@ -164,7 +164,7 @@ app.post("/process-mass-payment", async (req, res) => {
     await connection.beginTransaction();
     await connection.query("INSERT INTO MassPaymentsLog (MonthProcessed, DateProcessed, AddedBy) VALUES (?, NOW(), ?)", [month, addedBy || 'Admin']);
     for (const client of clients) {
-      await connection.query("INSERT INTO Payments (Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy) VALUES (?, ?, ?, NOW(), ?)", [client.id, month, client.feeCharged || "120", addedBy || 'Admin']);
+      await connection.query("INSERT INTO Payments (Payer, \`Payment Month\`, \`Payment Amount\`, AddedTS, AddedBy) VALUES (?, ?, ?, NOW(), ?)", [client.id, month, client.feeCharged || "120", addedBy || 'Admin']);
     }
     await connection.commit();
     res.json({ success: true });
