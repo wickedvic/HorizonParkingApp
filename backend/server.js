@@ -61,7 +61,7 @@ app.get("/clients", async (req, res) => {
 });
 
 app.post("/clients", async (req, res) => {
-  // Destructure 16 variables from the frontend payload
+  // Destructure exactly in the order the frontend sends them
   const { 
     firstName, lastName, address, city, state, zip, phone, 
     permitNumber, feeCharged, email, company, status, type, 
@@ -69,7 +69,7 @@ app.post("/clients", async (req, res) => {
   } = req.body;
 
   try {
-    // Variable count and order match the 16 placeholders + NOW() for a total of 17 columns
+    // FIX: Variable array order MUST match the column list order in INSERT
     const [result] = await pool.query(
       `INSERT INTO People (
         First, Last, Address, City, ST, zip, \`Cell Phone\`, 
@@ -85,18 +85,14 @@ app.post("/clients", async (req, res) => {
     );
     res.json({ success: true, id: result.insertId });
   } catch (err) { 
-    console.error("Client Creation Error:", err.message);
+    console.error("DATABASE INSERT ERROR:", err.sqlMessage || err.message);
     res.status(500).json({ error: err.message }); 
   }
 });
 
 app.put("/clients/:id", async (req, res) => {
   const { id } = req.params;
-  const { 
-    firstName, lastName, address, city, state, zip, phone, 
-    permitNumber, feeCharged, email, company, status, type, 
-    ccNum, ccExp 
-  } = req.body;
+  const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp } = req.body;
   try {
     await pool.query(
       `UPDATE People SET 
@@ -104,11 +100,7 @@ app.put("/clients/:id", async (req, res) => {
         \`Permit #\` = ?, \`Fee Charged\` = ?, EmailAddr = ?, Company = ?, Status = ?, 
         \`Client Type\` = ?, CreditCardNum = ?, CreditCardExpDate = ? 
       WHERE PeopleID = ?`,
-      [
-        firstName, lastName, address, city, state, zip, phone, 
-        permitNumber, feeCharged, email, company, status, 
-        type, ccNum, ccExp, id
-      ]
+      [firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp, id]
     );
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }

@@ -12,6 +12,7 @@ import {
   Badge as PermitIcon, 
   Add as AddIcon, 
   Edit as EditIcon, 
+  Info as InfoIcon,
   PictureAsPdf as PdfIcon,
   Payments as CashIcon,
   History as HistoryIcon,
@@ -27,7 +28,7 @@ const csvConfigBase = {
   useKeysAsHeaders: true,
 };
 
-export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, initialFilter }) {
+export default function ClientsPage({ user, initialFilter }) {
   const [clients, setClients] = useState([]);
   const [allCars, setAllCars] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -232,25 +233,36 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   };
 
   const handleCreateClient = async ({ values, table }) => {
+    // Fill all missing keys with empty strings to satisfy database constraints
     const payload = { 
         firstName: values.firstName || "",
         lastName: values.lastName || "",
-        address: "", city: "", state: "", zip: "", phone: "",
+        address: "",
+        city: "",
+        state: "",
+        zip: "",
+        phone: "",
         permitNumber: values.permitNumber || `P-${Math.floor(1000 + Math.random() * 9000)}`, 
         feeCharged: values.feeCharged || "120", 
-        email: "", company: "",
+        email: "",
+        company: "",
         status: normalize(values.status || 'active'), 
         type: normalize(values.type || 'tenant'),
-        ccNum: "", ccExp: "",
+        ccNum: "",
+        ccExp: "",
         addedBy: user?.username || 'Sys' 
     };
     try {
       const res = await fetch(`${API_BASE_URL}/clients`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", 
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       if (res.ok) { loadClients(); table.setCreatingRow(null); }
-      else { alert("Internal Server Error: Missing or mismatched database fields."); console.log("payload sent:", payload); }
+      else { 
+        const errData = await res.json();
+        alert(`Failed to add client: ${errData.error}`); 
+      }
     } catch (err) { console.error(err); }
   };
 
@@ -258,18 +270,22 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     const payload = { 
         ...values, 
         status: normalize(values.status),
-        type: normalize(values.type)
+        type: values.type
     };
     try {
       const res = await fetch(`${API_BASE_URL}/clients/${row.original.id}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
+        method: "PUT", 
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (res.ok) { loadClients(); table.setEditingRow(null);}
+      if (res.ok) { loadClients(); table.setEditingRow(null); }
     } catch (err) { console.error(err); }
   };
 
-  const displayedClients = useMemo(() => clients.filter(c => normalize(c.status) === normalize(statusFilter)), [clients, statusFilter]);
+  const displayedClients = useMemo(() => 
+    clients.filter(c => normalize(c.status) === normalize(statusFilter)), 
+    [clients, statusFilter]
+  );
 
   const columns = useMemo(() => [
     { accessorKey: "id", header: "ID", enableEditing: false, size: 80, filterFn: 'equals' },
@@ -337,7 +353,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         state={{ globalFilter, columnFilters }}
         onGlobalFilterChange={setGlobalFilter}
         onColumnFiltersChange={setColumnFilters}
-        // Correct localization for standard styling
         localization={{
             createRowModalTitle: 'Add New Client',
             editRowModalTitle: 'Edit Client',
