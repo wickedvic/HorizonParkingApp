@@ -133,105 +133,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     printWindow.document.close();
   };
 
-  const handlePrintReceipt = (client) => {
-    const defaultMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-    const selectedMonth = window.prompt("Enter the Effective Month/Year for this receipt:", defaultMonth);
-    if (selectedMonth === null) return; 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Payment Receipt - ${client.lastName}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 50px; text-align: center; }
-            .receipt-box { border: 1px solid black; padding: 40px; margin: 20px auto; width: 450px; text-align: left; }
-            .header { display: flex; align-items: center; justify-content: center; margin-bottom: 5px; }
-            .logo { background: #444; color: white; width: 40px; height: 40px; line-height: 40px; margin-right: 10px; font-weight: bold; text-align: center;}
-            .title { font-size: 22px; font-weight: bold; border-bottom: 1px solid black; display: inline-block; margin-bottom: 30px; }
-            .row { margin: 15px 0; font-size: 16px; display: flex; justify-content: space-between; }
-            .value { text-decoration: underline; }
-            .footer { margin-top: 100px; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="header"><div class="logo">H</div><div style="font-size: 20px;">20/20 Partners</div></div>
-          <div class="title">Parking Payment Receipt</div>
-          <div class="receipt-box">
-            <div class="row"><span>Client Name:</span> <span class="value">${client.lastName}, ${client.firstName}</span></div>
-            <div class="row"><span>Permit #:</span> <span class="value">${client.permitNumber || ''}</span></div>
-            <div class="row"><span>Paid:</span> <span class="value">$${client.feeCharged || '0'}.00</span></div>
-            <div class="row"><span>Effective Month:</span> <span class="value">${selectedMonth}</span></div>
-          </div>
-          <div class="footer">Printed on: ${new Date().toLocaleString()}</div>
-          <script>window.print();</script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
-
-  const handlePrintHistory = (client) => {
-    const clientPayments = payments.filter(p => p.payer == client.id);
-    const mid = Math.ceil(clientPayments.length / 2);
-    const leftCol = clientPayments.slice(0, mid);
-    const rightCol = clientPayments.slice(mid);
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Payment History - ${client.lastName}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 30px; }
-            .title-box { border: 1px solid black; width: 200px; margin: 0 auto 20px auto; text-align: center; font-weight: bold; padding: 5px; }
-            .header-info { border: 1px solid black; padding: 10px; display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 20px; }
-            .flex-container { display: flex; gap: 20px; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            th, td { border: 1px solid black; padding: 4px; text-align: left; }
-          </style>
-        </head>
-        <body>
-          <div class="title-box">Payment History</div>
-          <div class="header-info">
-            <div><div style="background:#444;color:white;width:30px;text-align:center;margin-bottom:5px;">H</div>${client.lastName}, ${client.firstName}<br/>Client Type: ${client.type || 'Payer'}</div>
-            <div style="text-align:right;">Method of Payment: ${client.paymentType || 'Credit Card'}<br/>Monthly Fee: $${client.feeCharged || '0'}.00</div>
-          </div>
-          <div class="flex-container">
-            <div style="flex:1;">
-                <table><thead><tr><th>Payment Month</th><th>Amount</th></tr></thead>
-                <tbody>${leftCol.map(p => `<tr><td>${p.month}</td><td>$${p.amount}.00</td></tr>`).join('')}</tbody>
-                </table>
-            </div>
-            <div style="flex:1;">
-                <table><thead><tr><th>Payment Month</th><th>Amount</th></tr></thead>
-                <tbody>${rightCol.map(p => `<tr><td>${p.month}</td><td>$${p.amount}.00</td></tr>`).join('')}</tbody>
-                </table>
-            </div>
-          </div>
-          <script>window.print();</script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
-
-  const handleMassPayment = async () => {
-    const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-    if (!window.confirm(`Process mass payments for ${currentMonth}?`)) return;
-    try {
-      const logRes = await fetch(`${API_BASE_URL}/mass-payments-log`);
-      const logs = await logRes.json();
-      if (logs.some(log => normalize(log.MonthProcessed) === normalize(currentMonth))) {
-        alert(`Already processed for ${currentMonth}.`); return;
-      }
-      const activeClients = clients.filter(c => normalize(c.status) === 'active');
-      const res = await fetch(`${API_BASE_URL}/process-mass-payment`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ month: currentMonth, clients: activeClients, addedBy: (user?.username || 'ADM').substring(0, 3) }),
-      });
-      if (res.ok) { alert("Payments processed."); loadPayments(); }
-    } catch (err) { console.error(err); }
-  };
-
   const handleCreateClient = async ({ values, table }) => {
     const payload = { 
         firstName: values.firstName || "",
@@ -247,11 +148,14 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     };
     try {
       const res = await fetch(`${API_BASE_URL}/clients`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", 
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (res.ok) { loadClients(); table.setCreatingRow(null); }
-      else { 
+      if (res.ok) { 
+        await loadClients(); // Refresh to get the actual ID from DB
+        table.setCreatingRow(null); 
+      } else { 
         const errData = await res.json();
         alert(`Failed to add client: ${errData.error}`); 
       }
@@ -266,7 +170,8 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     };
     try {
       const res = await fetch(`${API_BASE_URL}/clients/${row.original.id}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
+        method: "PUT", 
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       if (res.ok) { loadClients(); table.setEditingRow(null); }
@@ -348,27 +253,26 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
             createRowModalTitle: 'Add New Client',
             editRowModalTitle: 'Edit Client',
         }}
-        renderTopToolbarCustomActions={({ table }) => (
-          <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <Button 
-                variant="contained" 
-                startIcon={<AddIcon />} 
-                onClick={() => {
-                    if (table) table.setCreatingRow(true);
-                }}
-            >
-                Add New Client
-            </Button>
-            <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
-            <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
-            <Button startIcon={<FileDownloadIcon />} onClick={handleExportAll} variant="outlined" size="small">Export All</Button>
-          </Box>
-        )}
+        renderTopToolbarCustomActions={({ table }) => {
+          if (!table) return null; // Safety check to prevent TypeError
+          return (
+            <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <Button 
+                  variant="contained" 
+                  startIcon={<AddIcon />} 
+                  onClick={() => table.setCreatingRow(true)}
+              >
+                  Add New Client
+              </Button>
+              <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
+              <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
+              <Button startIcon={<FileDownloadIcon />} onClick={handleExportAll} variant="outlined" size="small">Export All</Button>
+            </Box>
+          );
+        }}
         renderRowActions={({ row, table }) => (
           <Stack direction="row" spacing={0.5}>
             <Tooltip title="Parking Permit"><IconButton onClick={() => handlePrintPermit(row.original)} color="error"><ParkingIcon /></IconButton></Tooltip>
-            <Tooltip title="Monthly Receipt"><IconButton onClick={() => handlePrintReceipt(row.original)} color="primary"><PdfIcon /></IconButton></Tooltip>
-            <Tooltip title="Payment History"><IconButton onClick={() => handlePrintHistory(row.original)} color="info"><HistoryIcon /></IconButton></Tooltip>
             <Tooltip title="Edit"><IconButton onClick={() => table.setEditingRow(row)}><EditIcon /></IconButton></Tooltip>
           </Stack>
         )}
