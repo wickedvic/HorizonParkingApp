@@ -28,7 +28,7 @@ const csvConfigBase = {
   useKeysAsHeaders: true,
 };
 
-export default function ClientsPage({ user, initialFilter }) {
+export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, initialFilter }) {
   const [clients, setClients] = useState([]);
   const [allCars, setAllCars] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -236,26 +236,18 @@ export default function ClientsPage({ user, initialFilter }) {
     const payload = { 
         firstName: values.firstName || "",
         lastName: values.lastName || "",
-        address: "",
-        city: "",
-        state: "",
-        zip: "",
-        phone: "",
+        address: "", city: "", state: "", zip: "", phone: "",
         permitNumber: values.permitNumber || `P-${Math.floor(1000 + Math.random() * 9000)}`, 
         feeCharged: values.feeCharged || "120", 
-        email: "",
-        company: "",
+        email: "", company: "",
         status: normalize(values.status || 'active'), 
         type: normalize(values.type || 'tenant'),
-        ccNum: "",
-        ccExp: "",
-        // Truncate to 3 characters to match database VARCHAR(3)
+        ccNum: "", ccExp: "",
         addedBy: (user?.username || 'ADM').substring(0, 3).toUpperCase() 
     };
     try {
       const res = await fetch(`${API_BASE_URL}/clients`, {
-        method: "POST", 
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       if (res.ok) { loadClients(); table.setCreatingRow(null); }
@@ -274,8 +266,7 @@ export default function ClientsPage({ user, initialFilter }) {
     };
     try {
       const res = await fetch(`${API_BASE_URL}/clients/${row.original.id}`, {
-        method: "PUT", 
-        headers: { "Content-Type": "application/json" },
+        method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       if (res.ok) { loadClients(); table.setEditingRow(null); }
@@ -359,9 +350,17 @@ export default function ClientsPage({ user, initialFilter }) {
         }}
         renderTopToolbarCustomActions={({ table }) => (
           <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>Add New Client</Button>
+            <Button 
+                variant="contained" 
+                startIcon={<AddIcon />} 
+                onClick={() => {
+                    if (table) table.setCreatingRow(true);
+                }}
+            >
+                Add New Client
+            </Button>
             <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
-            <Button startIcon={<FileDownloadIcon />} onClick={handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
+            <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
             <Button startIcon={<FileDownloadIcon />} onClick={handleExportAll} variant="outlined" size="small">Export All</Button>
           </Box>
         )}
