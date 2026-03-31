@@ -258,7 +258,10 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         body: JSON.stringify(payload),
       });
       if (res.ok) { loadClients(); table.setCreatingRow(null); }
-      else { alert("Server Error while adding client."); }
+      else { 
+        alert("Server Error while adding client."); 
+        console.log("PAYLOAD", payload) 
+      }
     } catch (err) { console.error(err); }
   };
 
