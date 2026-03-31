@@ -37,7 +37,22 @@ app.post("/auth/login", async (req, res) => {
 app.get("/clients", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM People ORDER BY Last ASC");
-    const formattedPeople = rows.map(person => ({
+    
+    // CLEANUP LOGIC: Filter out rows with no ID or where every field is empty/null
+    const cleanedRows = rows.filter(person => {
+      // 1. Must have a valid ID
+      if (!person.PeopleID) return false;
+
+      // 2. Must have at least one field that isn't empty or null
+      // We check all relevant keys to see if any have a value
+      const hasContent = Object.values(person).some(value => 
+        value !== null && value !== undefined && String(value).trim() !== ""
+      );
+
+      return hasContent;
+    });
+
+    const formattedPeople = cleanedRows.map(person => ({
       id: person.PeopleID,
       firstName: person.First,
       lastName: person.Last,
@@ -68,14 +83,10 @@ app.post("/clients", async (req, res) => {
   } = req.body;
 
   try {
-    // 1. GENERATE NEW ID MANUALLY (Since DB isn't auto-incrementing)
     const [maxIdRow] = await pool.query("SELECT MAX(PeopleID) as maxId FROM People");
     const newId = (maxIdRow[0].maxId || 0) + 1;
-
-    // 2. Truncate AddedBy to 3 chars for DB VARCHAR(3) limit
     const shortAddedBy = (addedBy || 'ADM').substring(0, 3).toUpperCase();
 
-    // 3. Perform Insert with the manual ID
     const [result] = await pool.query(
       `INSERT INTO People (
         PeopleID, First, Last, Address, City, ST, zip, \`Cell Phone\`, 
