@@ -260,7 +260,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       if (res.ok) { loadClients(); table.setCreatingRow(null); }
       else { 
         alert("Server Error while adding client."); 
-        console.log("PAYLOAD", payload) 
+        console.log("PAYLOAD ADD", payload) 
       }
     } catch (err) { console.error(err); }
   };
@@ -271,6 +271,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         status: normalize(values.status),
         type: values.type
     };
+    console.log("PAYLOAD SAVE", payload) 
     try {
       const res = await fetch(`${API_BASE_URL}/clients/${row.original.id}`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
