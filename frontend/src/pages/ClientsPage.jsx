@@ -12,7 +12,6 @@ import {
   Badge as PermitIcon, 
   Add as AddIcon, 
   Edit as EditIcon, 
-  Info as InfoIcon,
   PictureAsPdf as PdfIcon,
   Payments as CashIcon,
   History as HistoryIcon,
@@ -233,7 +232,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   };
 
   const handleCreateClient = async ({ values, table }) => {
-    // PASS EMPTY STRINGS FOR ALL VALUES NOT COLLECTED IN THE UI TO AVOID 500 ERRORS
+    // FILL EMPTY STRINGS FOR MISSING FIELDS TO PREVENT 500 ERROR
     const payload = { 
         firstName: values.firstName || "",
         lastName: values.lastName || "",
@@ -258,10 +257,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         body: JSON.stringify(payload),
       });
       if (res.ok) { loadClients(); table.setCreatingRow(null); }
-      else { 
-        alert("Server Error while adding client."); 
-        console.log("PAYLOAD ADD", payload) 
-      }
+      else { alert("Failed to add client. Check console."); }
     } catch (err) { console.error(err); }
   };
 
@@ -271,13 +267,12 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         status: normalize(values.status),
         type: values.type
     };
-   
     try {
       const res = await fetch(`${API_BASE_URL}/clients/${row.original.id}`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (res.ok) { loadClients(); table.setEditingRow(null);  console.log("PAYLOAD SAVE", payload) }
+      if (res.ok) { loadClients(); table.setEditingRow(null);}
     } catch (err) { console.error(err); }
   };
 
@@ -349,6 +344,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         state={{ globalFilter, columnFilters }}
         onGlobalFilterChange={setGlobalFilter}
         onColumnFiltersChange={setColumnFilters}
+        // CORRECT LOCALIZATION TO CHANGE TITLES WITHOUT BREAKING CSS
         localization={{
             createRowModalTitle: 'Add New Client',
             editRowModalTitle: 'Edit Client',

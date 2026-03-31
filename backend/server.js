@@ -61,7 +61,7 @@ app.get("/clients", async (req, res) => {
 });
 
 app.post("/clients", async (req, res) => {
-  // CAPTURE ALL 16 INCOMING VARIABLES
+  // CAPTURE ALL 16 INCOMING VARIABLES 
   const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp, addedBy } = req.body;
   try {
     // Variable count matches the 16 placeholders + NOW() for a total of 17 columns
