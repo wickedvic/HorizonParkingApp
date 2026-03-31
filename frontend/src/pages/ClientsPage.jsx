@@ -59,6 +59,8 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       const data = await res.json();
       // Ensure we are setting an array and filtering for valid objects
       setClients(Array.isArray(data) ? data.filter(row => row.id) : []);
+      console.log("Loaded clients:", data);
+      console.log("Filtered clients:", Array.isArray(data) ? data.filter(row => row.id) : []);
     } catch (err) { console.error(err); }
   };
 
