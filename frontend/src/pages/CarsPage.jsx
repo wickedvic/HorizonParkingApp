@@ -57,19 +57,26 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...values, addedBy: user?.username }),
       });
-      if (res.ok) { loadCars(); table.setCreatingRow(null); }
-    } catch (err) { console.error(err); }
+      if (res.ok) {
+        await loadCars();
+        table.setCreatingRow(null);
+      }
+    } catch (err) { console.error("Error creating car:", err); }
   };
 
-  const handleSaveCar = async ({ values, table }) => {
+  const handleSaveCar = async ({ values, row, table }) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/cars/${values.id}`, {
+      // Use row.original.id to ensure we are hitting the correct record
+      const res = await fetch(`${API_BASE_URL}/cars/${row.original.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
-      if (res.ok) { loadCars(); table.setEditingRow(null); }
-    } catch (err) { console.error(err); }
+      if (res.ok) {
+        await loadCars();
+        table.setEditingRow(null);
+      }
+    } catch (err) { console.error("Error updating car:", err); }
   };
 
   const handleDeleteCar = async (id, plate) => {
@@ -77,7 +84,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       try {
         const res = await fetch(`${API_BASE_URL}/cars/${id}`, { method: 'DELETE' });
         if (res.ok) loadCars();
-      } catch (err) { console.error(err); }
+      } catch (err) { console.error("Error deleting car:", err); }
     }
   };
 
@@ -103,7 +110,11 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       header: "Owner",
       editVariant: 'select',
       editSelectOptions: clients.map(c => ({ label: `${c.lastName}, ${c.firstName} (ID: ${c.id})`, value: c.id })),
-      muiEditTextFieldProps: ({ row }) => ({ select: true, value: row?.original?.owner_id || "" }),
+      muiEditTextFieldProps: ({ row }) => ({
+        select: true,
+        // CHANGED: Use defaultValue instead of value so the dropdown is actually selectable
+        defaultValue: row?.original?.owner_id || "", 
+      }),
       accessorFn: (row) => `${row.owner_first || ''} ${row.owner_last || ''}`.trim(),
       id: "owner_name",
       Cell: ({ row, renderedCellValue }) => {

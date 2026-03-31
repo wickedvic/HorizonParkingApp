@@ -81,20 +81,19 @@ app.post("/cars", async (req, res) => {
   try {
     const [result] = await pool.query(
       `INSERT INTO Cars (\`Car Make\`, Model, Color, Year, License, Owner, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`, 
-      [make, model, color, year, license_plate, owner_id, addedBy || 'Admin']
+      [make, model, color, year, license_plate, owner_id || null, addedBy || 'Admin']
     );
     res.json({ success: true, id: result.insertId });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// FIXED: Added missing PUT route for editing cars
 app.put("/cars/:id", async (req, res) => {
   const { id } = req.params;
   const { make, model, color, year, license_plate, owner_id } = req.body;
   try {
     await pool.query(
       `UPDATE Cars SET \`Car Make\` = ?, Model = ?, Color = ?, Year = ?, License = ?, Owner = ? WHERE \`Car ID#\` = ?`,
-      [make, model, color, year, license_plate, owner_id, id]
+      [make, model, color, year, license_plate, owner_id || null, id]
     );
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -130,7 +129,10 @@ app.delete("/permits/:id", async (req, res) => {
     const [result] = await pool.query("DELETE FROM DailyPermit WHERE TempPermitID = ?", [req.params.id]);
     if (result.affectedRows === 0) return res.status(404).json({ error: "Record not found" });
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    console.error("Delete Error:", err.message);
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
 // --- PAYMENTS ---
