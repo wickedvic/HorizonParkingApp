@@ -37,89 +37,31 @@ app.post("/auth/login", async (req, res) => {
 app.get("/clients", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM People ORDER BY Last ASC");
-    
-    // CLEANUP LOGIC: Filter out rows with no ID or where every field is empty/null
     const cleanedRows = rows.filter(person => {
-      // 1. Must have a valid ID
       if (!person.PeopleID) return false;
-
-      // 2. Must have at least one field that isn't empty or null
-      // We check all relevant keys to see if any have a value
       const hasContent = Object.values(person).some(value => 
         value !== null && value !== undefined && String(value).trim() !== ""
       );
-
       return hasContent;
     });
-
     const formattedPeople = cleanedRows.map(person => ({
-      id: person.PeopleID,
-      firstName: person.First,
-      lastName: person.Last,
-      address: person.Address,
-      city: person.City,
-      state: person.ST,
-      zip: person.zip,
-      phone: person['Cell Phone'] || person['Home Phone'] || "N/A",
-      permitNumber: person['Permit #'],
-      feeCharged: person['Fee Charged'],
-      email: person.EmailAddr,
-      company: person.Company,
-      status: person.Status,
-      ccNum: person.CreditCardNum,
-      ccExp: person.CreditCardExpDate,
-      paymentType: person['Payment Type'],
-      type: person['Client Type']
+      id: person.PeopleID, firstName: person.First, lastName: person.Last, address: person.Address, city: person.City, state: person.ST, zip: person.zip, phone: person['Cell Phone'] || person['Home Phone'] || "N/A", permitNumber: person['Permit #'], feeCharged: person['Fee Charged'], email: person.EmailAddr, company: person.Company, status: person.Status, ccNum: person.CreditCardNum, ccExp: person.CreditCardExpDate, paymentType: person['Payment Type'], type: person['Client Type']
     }));
     res.json(formattedPeople);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post("/clients", async (req, res) => {
-  const { 
-    firstName, lastName, address, city, state, zip, phone, 
-    permitNumber, feeCharged, email, company, status, type, 
-    ccNum, ccExp, addedBy 
-  } = req.body;
-
+  const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp, addedBy } = req.body;
   try {
     const [maxIdRow] = await pool.query("SELECT MAX(PeopleID) as maxId FROM People");
     const newId = (maxIdRow[0].maxId || 0) + 1;
     const shortAddedBy = (addedBy || 'ADM').substring(0, 3).toUpperCase();
-
-    const [result] = await pool.query(
-      `INSERT INTO People (
-        PeopleID, First, Last, Address, City, ST, zip, \`Cell Phone\`, 
-        \`Permit #\`, \`Fee Charged\`, EmailAddr, Company, Status, 
-        \`Client Type\`, CreditCardNum, CreditCardExpDate, AddedBy, AddedTS
-      ) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [
-        newId, firstName, lastName, address, city, state, zip, phone, 
-        permitNumber, feeCharged, email, company, status || 'active', 
-        type || 'tenant', ccNum, ccExp, shortAddedBy
-      ]
+    await pool.query(
+      `INSERT INTO People (PeopleID, First, Last, Address, City, ST, zip, \`Cell Phone\`, \`Permit #\`, \`Fee Charged\`, EmailAddr, Company, Status, \`Client Type\`, CreditCardNum, CreditCardExpDate, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [newId, firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status || 'active', type || 'tenant', ccNum, ccExp, shortAddedBy]
     );
     res.json({ success: true, id: newId });
-  } catch (err) { 
-    console.error("DATABASE INSERT ERROR:", err.sqlMessage || err.message);
-    res.status(500).json({ error: err.message }); 
-  }
-});
-
-app.put("/clients/:id", async (req, res) => {
-  const { id } = req.params;
-  const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp } = req.body;
-  try {
-    await pool.query(
-      `UPDATE People SET 
-        First = ?, Last = ?, Address = ?, City = ?, ST = ?, zip = ?, \`Cell Phone\` = ?, 
-        \`Permit #\` = ?, \`Fee Charged\` = ?, EmailAddr = ?, Company = ?, Status = ?, 
-        \`Client Type\` = ?, CreditCardNum = ?, CreditCardExpDate = ? 
-      WHERE PeopleID = ?`,
-      [firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp, id]
-    );
-    res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -137,8 +79,24 @@ app.get("/cars", async (req, res) => {
 app.post("/cars", async (req, res) => {
   const { make, model, color, year, license_plate, owner_id, addedBy } = req.body;
   try {
-    const [result] = await pool.query(`INSERT INTO Cars (\`Car Make\`, Model, Color, Year, License, Owner, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`, [make, model, color, year, license_plate, owner_id, addedBy || 'Admin']);
+    const [result] = await pool.query(
+      `INSERT INTO Cars (\`Car Make\`, Model, Color, Year, License, Owner, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`, 
+      [make, model, color, year, license_plate, owner_id, addedBy || 'Admin']
+    );
     res.json({ success: true, id: result.insertId });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// FIXED: Added missing PUT route for editing cars
+app.put("/cars/:id", async (req, res) => {
+  const { id } = req.params;
+  const { make, model, color, year, license_plate, owner_id } = req.body;
+  try {
+    await pool.query(
+      `UPDATE Cars SET \`Car Make\` = ?, Model = ?, Color = ?, Year = ?, License = ?, Owner = ? WHERE \`Car ID#\` = ?`,
+      [make, model, color, year, license_plate, owner_id, id]
+    );
+    res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -162,15 +120,9 @@ app.post("/permits", async (req, res) => {
   try {
     const shortAddedBy = (added_by || 'ADM').substring(0, 3).toUpperCase();
     const manualID = Math.floor(100000 + Math.random() * 900000);
-    const [result] = await pool.query(
-      "INSERT INTO DailyPermit (TempPermitID, UserName, PermitDate, PermitStartDate, PermitEndDate, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, ?, NOW())",
-      [manualID, user_name, permit_number, start_date, end_date, shortAddedBy]
-    );
+    await pool.query("INSERT INTO DailyPermit (TempPermitID, UserName, PermitDate, PermitStartDate, PermitEndDate, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, ?, NOW())", [manualID, user_name, permit_number, start_date, end_date, shortAddedBy]);
     res.json({ success: true, id: manualID });
-  } catch (err) { 
-    console.error("Permit Creation Error:", err.message);
-    res.status(500).json({ error: err.message }); 
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.delete("/permits/:id", async (req, res) => {
@@ -178,20 +130,10 @@ app.delete("/permits/:id", async (req, res) => {
     const [result] = await pool.query("DELETE FROM DailyPermit WHERE TempPermitID = ?", [req.params.id]);
     if (result.affectedRows === 0) return res.status(404).json({ error: "Record not found" });
     res.json({ success: true });
-  } catch (err) { 
-    console.error("Delete Error:", err.message);
-    res.status(500).json({ error: err.message }); 
-  }
-});
-
-// --- PAYMENTS & MASS PAYMENTS ---
-app.get("/mass-payments-log", async (req, res) => {
-  try {
-    const [rows] = await pool.query("SELECT * FROM MassPaymentsLog ORDER BY DateProcessed DESC");
-    res.json(rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// --- PAYMENTS ---
 app.post("/process-mass-payment", async (req, res) => {
   const { month, clients, addedBy } = req.body;
   const connection = await pool.getConnection();
@@ -199,10 +141,7 @@ app.post("/process-mass-payment", async (req, res) => {
     await connection.beginTransaction();
     await connection.query("INSERT INTO MassPaymentsLog (MonthProcessed, DateProcessed, AddedBy) VALUES (?, NOW(), ?)", [month, addedBy || 'Admin']);
     for (const client of clients) {
-      await connection.query(
-        "INSERT INTO Payments (Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy) VALUES (?, ?, ?, NOW(), ?)", 
-        [client.id, month, client.feeCharged || "120", addedBy || 'Admin']
-      );
+      await connection.query("INSERT INTO Payments (Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy) VALUES (?, ?, ?, NOW(), ?)", [client.id, month, client.feeCharged || "120", addedBy || 'Admin']);
     }
     await connection.commit();
     res.json({ success: true });
@@ -215,9 +154,7 @@ app.post("/process-mass-payment", async (req, res) => {
 app.get("/payments", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM Payments ORDER BY AddedTS DESC");
-    const formatted = rows.map(p => ({
-      id: p.ID, payer: p.Payer, month: p['Payment Month'], amount: parseFloat(p['Payment Amount']) || 0, created_at: p.AddedTS, added_by: p.AddedBy
-    }));
+    const formatted = rows.map(p => ({ id: p.ID, payer: p.Payer, month: p['Payment Month'], amount: parseFloat(p['Payment Amount']) || 0, created_at: p.AddedTS, added_by: p.AddedBy }));
     res.json(formatted);
   } catch (err) { res.status(500).json({ error: "Failed to fetch payments" }); }
 });
