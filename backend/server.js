@@ -61,7 +61,6 @@ app.get("/clients", async (req, res) => {
 });
 
 app.post("/clients", async (req, res) => {
-  // Destructure exactly in the order the frontend sends them
   const { 
     firstName, lastName, address, city, state, zip, phone, 
     permitNumber, feeCharged, email, company, status, type, 
@@ -69,21 +68,28 @@ app.post("/clients", async (req, res) => {
   } = req.body;
 
   try {
-    // FIX: Variable array order MUST match the column list order in INSERT
+    // 1. GENERATE NEW ID MANUALLY (Since DB isn't auto-incrementing)
+    const [maxIdRow] = await pool.query("SELECT MAX(PeopleID) as maxId FROM People");
+    const newId = (maxIdRow[0].maxId || 0) + 1;
+
+    // 2. Truncate AddedBy to 3 chars for DB VARCHAR(3) limit
+    const shortAddedBy = (addedBy || 'ADM').substring(0, 3).toUpperCase();
+
+    // 3. Perform Insert with the manual ID
     const [result] = await pool.query(
       `INSERT INTO People (
-        First, Last, Address, City, ST, zip, \`Cell Phone\`, 
+        PeopleID, First, Last, Address, City, ST, zip, \`Cell Phone\`, 
         \`Permit #\`, \`Fee Charged\`, EmailAddr, Company, Status, 
         \`Client Type\`, CreditCardNum, CreditCardExpDate, AddedBy, AddedTS
       ) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
-        firstName, lastName, address, city, state, zip, phone, 
+        newId, firstName, lastName, address, city, state, zip, phone, 
         permitNumber, feeCharged, email, company, status || 'active', 
-        type || 'tenant', ccNum, ccExp, addedBy
+        type || 'tenant', ccNum, ccExp, shortAddedBy
       ]
     );
-    res.json({ success: true, id: result.insertId });
+    res.json({ success: true, id: newId });
   } catch (err) { 
     console.error("DATABASE INSERT ERROR:", err.sqlMessage || err.message);
     res.status(500).json({ error: err.message }); 
@@ -132,7 +138,7 @@ app.delete("/cars/:id", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- DAILY PERMITS (TEMPORARY) ---
+// --- DAILY PERMITS ---
 app.get("/permits", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM DailyPermit ORDER BY AddedTS DESC");
