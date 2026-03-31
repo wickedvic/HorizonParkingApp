@@ -232,23 +232,16 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   };
 
   const handleCreateClient = async ({ values, table }) => {
-    // FILL EMPTY STRINGS FOR MISSING FIELDS TO PREVENT 500 ERROR
     const payload = { 
         firstName: values.firstName || "",
         lastName: values.lastName || "",
-        address: "",
-        city: "",
-        state: "",
-        zip: "",
-        phone: "",
+        address: "", city: "", state: "", zip: "", phone: "",
         permitNumber: values.permitNumber || `P-${Math.floor(1000 + Math.random() * 9000)}`, 
         feeCharged: values.feeCharged || "120", 
-        email: "",
-        company: "",
+        email: "", company: "",
         status: normalize(values.status || 'active'), 
-        type: values.type || 'tenant',
-        ccNum: "",
-        ccExp: "",
+        type: normalize(values.type || 'tenant'),
+        ccNum: "", ccExp: "",
         addedBy: user?.username || 'Sys' 
     };
     try {
@@ -257,7 +250,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         body: JSON.stringify(payload),
       });
       if (res.ok) { loadClients(); table.setCreatingRow(null); }
-      else { alert("Failed to add client. Check console."); }
+      else { alert("Internal Server Error: Missing or mismatched database fields."); console.log("payload sent:", payload); }
     } catch (err) { console.error(err); }
   };
 
@@ -265,7 +258,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     const payload = { 
         ...values, 
         status: normalize(values.status),
-        type: values.type
+        type: normalize(values.type)
     };
     try {
       const res = await fetch(`${API_BASE_URL}/clients/${row.original.id}`, {
@@ -344,7 +337,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         state={{ globalFilter, columnFilters }}
         onGlobalFilterChange={setGlobalFilter}
         onColumnFiltersChange={setColumnFilters}
-        // CORRECT LOCALIZATION TO CHANGE TITLES WITHOUT BREAKING CSS
+        // Correct localization for standard styling
         localization={{
             createRowModalTitle: 'Add New Client',
             editRowModalTitle: 'Edit Client',

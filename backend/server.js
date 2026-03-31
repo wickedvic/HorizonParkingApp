@@ -61,29 +61,54 @@ app.get("/clients", async (req, res) => {
 });
 
 app.post("/clients", async (req, res) => {
-  // CAPTURE ALL 16 INCOMING VARIABLES 
-  const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp, addedBy } = req.body;
+  // Destructure 16 variables from the frontend payload
+  const { 
+    firstName, lastName, address, city, state, zip, phone, 
+    permitNumber, feeCharged, email, company, status, type, 
+    ccNum, ccExp, addedBy 
+  } = req.body;
+
   try {
-    // Variable count matches the 16 placeholders + NOW() for a total of 17 columns
+    // Variable count and order match the 16 placeholders + NOW() for a total of 17 columns
     const [result] = await pool.query(
-      `INSERT INTO People (First, Last, Address, City, ST, zip, \`Cell Phone\`, \`Permit #\`, \`Fee Charged\`, EmailAddr, Company, Status, \`Client Type\`, CreditCardNum, CreditCardExpDate, AddedBy, AddedTS) 
+      `INSERT INTO People (
+        First, Last, Address, City, ST, zip, \`Cell Phone\`, 
+        \`Permit #\`, \`Fee Charged\`, EmailAddr, Company, Status, 
+        \`Client Type\`, CreditCardNum, CreditCardExpDate, AddedBy, AddedTS
+      ) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status || 'active', type || 'tenant', ccNum, ccExp, addedBy]
+      [
+        firstName, lastName, address, city, state, zip, phone, 
+        permitNumber, feeCharged, email, company, status || 'active', 
+        type || 'tenant', ccNum, ccExp, addedBy
+      ]
     );
     res.json({ success: true, id: result.insertId });
   } catch (err) { 
-    console.error("Client Creation Error:", err);
+    console.error("Client Creation Error:", err.message);
     res.status(500).json({ error: err.message }); 
   }
 });
 
 app.put("/clients/:id", async (req, res) => {
   const { id } = req.params;
-  const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp } = req.body;
+  const { 
+    firstName, lastName, address, city, state, zip, phone, 
+    permitNumber, feeCharged, email, company, status, type, 
+    ccNum, ccExp 
+  } = req.body;
   try {
     await pool.query(
-      `UPDATE People SET First = ?, Last = ?, Address = ?, City = ?, ST = ?, zip = ?, \`Cell Phone\` = ?, \`Permit #\` = ?, \`Fee Charged\` = ?, EmailAddr = ?, Company = ?, Status = ?, \`Client Type\` = ?, CreditCardNum = ?, CreditCardExpDate = ? WHERE PeopleID = ?`,
-      [firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp, id]
+      `UPDATE People SET 
+        First = ?, Last = ?, Address = ?, City = ?, ST = ?, zip = ?, \`Cell Phone\` = ?, 
+        \`Permit #\` = ?, \`Fee Charged\` = ?, EmailAddr = ?, Company = ?, Status = ?, 
+        \`Client Type\` = ?, CreditCardNum = ?, CreditCardExpDate = ? 
+      WHERE PeopleID = ?`,
+      [
+        firstName, lastName, address, city, state, zip, phone, 
+        permitNumber, feeCharged, email, company, status, 
+        type, ccNum, ccExp, id
+      ]
     );
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -115,7 +140,7 @@ app.delete("/cars/:id", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- DAILY PERMITS ---
+// --- DAILY PERMITS (TEMPORARY) ---
 app.get("/permits", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM DailyPermit ORDER BY AddedTS DESC");
@@ -165,7 +190,10 @@ app.post("/process-mass-payment", async (req, res) => {
     await connection.beginTransaction();
     await connection.query("INSERT INTO MassPaymentsLog (MonthProcessed, DateProcessed, AddedBy) VALUES (?, NOW(), ?)", [month, addedBy || 'Admin']);
     for (const client of clients) {
-      await connection.query("INSERT INTO Payments (Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy) VALUES (?, ?, ?, NOW(), ?)", [client.id, month, client.feeCharged || "120", addedBy || 'Admin']);
+      await connection.query(
+        "INSERT INTO Payments (Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy) VALUES (?, ?, ?, NOW(), ?)", 
+        [client.id, month, client.feeCharged || "120", addedBy || 'Admin']
+      );
     }
     await connection.commit();
     res.json({ success: true });
