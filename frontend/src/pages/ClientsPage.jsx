@@ -238,7 +238,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         permitNumber: values.permitNumber || `P-${Math.floor(1000 + Math.random() * 9000)}`, 
         feeCharged: values.feeCharged || "120", 
         status: normalize(values.status || 'active'), 
-        type: normalize(values.type || 'tenant'),
+        type: values.type || 'tenant',
         addedBy: user?.username || 'Sys' 
     };
     try {
@@ -254,7 +254,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     const payload = { 
         ...values, 
         status: normalize(values.status),
-        type: normalize(values.type)
+        type: values.type
     };
     try {
       const res = await fetch(`${API_BASE_URL}/clients/${row.original.id}`, {
