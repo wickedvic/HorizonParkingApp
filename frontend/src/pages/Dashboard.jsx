@@ -4,8 +4,6 @@ import { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
 import ClientsPage from "./ClientsPage"
 import PermitsPage from "./PermitsPage"
-import PaymentsPage from "./PaymentsPage"
-import ReportsPage from "./ReportsPage"
 import CarsPage from "./CarsPage"
 import { 
   Search as SearchIcon,
@@ -242,8 +240,6 @@ export default function Dashboard({ user, onLogout }) {
         {currentPage === "clients" && <ClientsPage user={user} initialFilter={initialClientFilter} onNavigateCar={handleNavigateToCars} onNavigatePermit={handleNavigateToPermits} />}
         {currentPage === "cars" && <CarsPage user={user} initialFilter={initialCarFilter} onNavigateClient={handleNavigateToClients} />}
         {currentPage === "permits" && <PermitsPage user={user} initialFilter={permitFilter} />}
-        {currentPage === "payments" && <PaymentsPage user={user} onUpdate={loadStats} />}
-        {currentPage === "reports" && <ReportsPage user={user} />}
       </main>
     </div>
   )
