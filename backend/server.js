@@ -77,14 +77,18 @@ app.get("/cars", async (req, res) => {
 });
 
 app.post("/cars", async (req, res) => {
+  // FIX: Destructure explicitly from req.body
   const { make, model, color, year, license_plate, owner_id, addedBy } = req.body;
   try {
     const [result] = await pool.query(
       `INSERT INTO Cars (\`Car Make\`, Model, Color, Year, License, Owner, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`, 
-      [make, model, color, year, license_plate, owner_id || null, addedBy || 'Admin']
+      [make || "", model || "", color || "", year || "", license_plate || "", owner_id || null, addedBy || 'Admin']
     );
     res.json({ success: true, id: result.insertId });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    console.error("ADD CAR ERROR:", err.message);
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
 app.put("/cars/:id", async (req, res) => {
@@ -93,10 +97,13 @@ app.put("/cars/:id", async (req, res) => {
   try {
     await pool.query(
       `UPDATE Cars SET \`Car Make\` = ?, Model = ?, Color = ?, Year = ?, License = ?, Owner = ? WHERE \`Car ID#\` = ?`,
-      [make, model, color, year, license_plate, owner_id || null, id]
+      [make || "", model || "", color || "", year || "", license_plate || "", owner_id || null, id]
     );
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    console.error("EDIT CAR ERROR:", err.message);
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
 app.delete("/cars/:id", async (req, res) => {

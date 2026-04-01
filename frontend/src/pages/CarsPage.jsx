@@ -52,33 +52,42 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   const handleCreateCar = async ({ values, table }) => {
     try {
+      // FIX: Ensure owner_id and license_plate are explicitly extracted from the form values
+      const payload = {
+        make: values.make || "",
+        model: values.model || "",
+        color: values.color || "",
+        year: values.year || "",
+        license_plate: values.license_plate || "",
+        owner_id: values.owner_id || null,
+        addedBy: user?.username || 'Admin'
+      };
+
       const res = await fetch(`${API_BASE_URL}/cars`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          ...values, 
-          owner_id: values.owner_id, 
-          license_plate: values.license_plate, 
-          addedBy: user?.username 
-        }),
+        body: JSON.stringify(payload),
       });
+
       if (res.ok) {
         await loadCars();
         table.setCreatingRow(null);
+      } else {
+        const errorData = await res.json();
+        alert(`Error: ${errorData.error}`);
       }
     } catch (err) { console.error("Error creating car:", err); }
   };
 
   const handleSaveCar = async ({ values, row, table }) => {
     try {
-      // FIX: Explicitly map 'owner_name' (from UI) back to 'owner_id' for the database
       const payload = {
         make: values.make,
         model: values.model,
         color: values.color,
         year: values.year,
         license_plate: values.license_plate,
-        owner_id: values.owner_id // MRT will now correctly populate this key
+        owner_id: values.owner_id
       };
 
       const res = await fetch(`${API_BASE_URL}/cars/${row.original.id}`, {
@@ -120,16 +129,15 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
     { accessorKey: "year", header: "Year" },
     { accessorKey: "color", header: "Color" },
     {
-      accessorKey: "owner_id", // Using the real ID key ensures MRT maps the select value correctly
+      accessorKey: "owner_id",
       header: "Owner",
       editVariant: 'select',
-      editSelectOptions: clients.map(c => ({ 
-        label: `${c.lastName}, ${c.firstName} (ID: ${c.id})`, 
-        value: c.id 
-      })),
+      editSelectOptions: clients.map(c => ({ label: `${c.lastName}, ${c.firstName} (ID: ${c.id})`, value: c.id })),
       muiEditTextFieldProps: {
         select: true,
       },
+      accessorFn: (row) => `${row.owner_first || ''} ${row.owner_last || ''}`.trim(),
+      id: "owner_name",
       Cell: ({ row }) => {
         const firstName = row.original.owner_first || "";
         const lastName = row.original.owner_last || "";
