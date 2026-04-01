@@ -57,8 +57,8 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           ...values, 
-          owner_id: values.owner_id, // Explicitly pass owner_id
-          license_plate: values.license_plate, // Explicitly pass plate
+          owner_id: values.owner_id, 
+          license_plate: values.license_plate, 
           addedBy: user?.username 
         }),
       });
@@ -71,14 +71,14 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   const handleSaveCar = async ({ values, row, table }) => {
     try {
-      // Ensure we send owner_id and license_plate correctly to the backend
+      // FIX: Explicitly map 'owner_name' (from UI) back to 'owner_id' for the database
       const payload = {
         make: values.make,
         model: values.model,
         color: values.color,
         year: values.year,
         license_plate: values.license_plate,
-        owner_id: values.owner_id
+        owner_id: values.owner_id // MRT will now correctly populate this key
       };
 
       const res = await fetch(`${API_BASE_URL}/cars/${row.original.id}`, {
@@ -120,23 +120,26 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
     { accessorKey: "year", header: "Year" },
     { accessorKey: "color", header: "Color" },
     {
-      accessorKey: "owner_id",
+      accessorKey: "owner_id", // Using the real ID key ensures MRT maps the select value correctly
       header: "Owner",
       editVariant: 'select',
-      editSelectOptions: clients.map(c => ({ label: `${c.lastName}, ${c.firstName} (ID: ${c.id})`, value: c.id })),
-      muiEditTextFieldProps: ({ row }) => ({
+      editSelectOptions: clients.map(c => ({ 
+        label: `${c.lastName}, ${c.firstName} (ID: ${c.id})`, 
+        value: c.id 
+      })),
+      muiEditTextFieldProps: {
         select: true,
-        defaultValue: row?.original?.owner_id || "", 
-      }),
-      accessorFn: (row) => `${row.owner_first || ''} ${row.owner_last || ''}`.trim(),
-      id: "owner_name",
-      Cell: ({ row, renderedCellValue }) => {
-        const nameStr = renderedCellValue?.toString() || "";
+      },
+      Cell: ({ row }) => {
+        const firstName = row.original.owner_first || "";
+        const lastName = row.original.owner_last || "";
+        const fullName = `${firstName} ${lastName}`.trim();
+        
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <PersonIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-            <Link component="button" variant="body2" sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }} onClick={() => onNavigateClient(row.original.owner_last || "")}>
-              {nameStr !== "" ? nameStr : `ID: ${row.original.owner_id}`}
+            <Link component="button" variant="body2" sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }} onClick={() => onNavigateClient(lastName || "")}>
+              {fullName !== "" ? fullName : `ID: ${row.original.owner_id}`}
             </Link>
           </Box>
         );
