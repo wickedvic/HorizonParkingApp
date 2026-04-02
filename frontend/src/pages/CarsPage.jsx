@@ -83,7 +83,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         return;
     }
 
-    // 1. Validation Check: Ensure NO fields are empty
     if (
         !formData.license_plate?.trim() || 
         !formData.make?.trim() || 
@@ -93,7 +92,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         !formData.owner_id
     ) {
         alert("Please fill out all vehicle details. No fields can be left empty.");
-        return; // Stop the submission process
+        return; 
     }
 
     const url = isEditMode ? `${API_BASE_URL}/cars/${formData.id}` : `${API_BASE_URL}/cars`;
@@ -146,10 +145,13 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   const displayedCars = useMemo(() => {
     return cars.filter(car => {
+      // FIX: If search is active, show all results regardless of active/inactive tab
+      if (globalFilter) return true; 
+
       const owner = clients.find(c => c.id == car.owner_id);
       return (owner?.status?.toLowerCase() || "inactive") === statusFilter.toLowerCase();
     });
-  }, [cars, clients, statusFilter]);
+  }, [cars, clients, statusFilter, globalFilter]);
 
   const columns = useMemo(() => [
     { accessorKey: "id", header: "ID", size: 80 },

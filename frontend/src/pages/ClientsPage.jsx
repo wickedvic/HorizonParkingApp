@@ -33,12 +33,17 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({ firstName: '', lastName: '', type: 'tenant', status: 'active', permitNumber: '', feeCharged: '120', id: null });
 
-  const [globalFilter, setGlobalFilter] = useState("");
+  const [globalFilter, setGlobalFilter] = useState(initialFilter || "");
   const [columnFilters, setColumnFilters] = useState([]);
 
   useEffect(() => {
     loadClients(); loadAllCars(); loadPayments();
   }, []);
+
+  // FIX: Sync initialFilter changes to the table's state
+  useEffect(() => {
+    setGlobalFilter(initialFilter || "");
+  }, [initialFilter]);
 
   const normalize = (val) => val?.toString().toLowerCase().trim() || "";
 
@@ -156,7 +161,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     if (!window.confirm(`Process mass payments for ${currentMonth}? This will only charge active users with a fee greater than $0 who haven't paid yet.`)) return;
     
     try {
-      // Ensure we explicitly filter out anyone with an invalid or zero fee
       const activeClients = clients.filter(c => {
         const fee = parseFloat(c.feeCharged);
         return normalize(c.status) === 'active' && !isNaN(fee) && fee > 0;
@@ -196,10 +200,9 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const handleCloseModal = () => setModalOpen(false);
 
   const handleFormSubmit = async () => {
-    // 1. Validation Check: Ensure required fields are not empty
     if (!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.type || !formData.status) {
       alert("Please fill out all required fields. First Name, Last Name, Type, and Status cannot be empty.");
-      return; // Stop the submission process
+      return; 
     }
 
     const url = isEditMode ? `${API_BASE_URL}/clients/${formData.id}` : `${API_BASE_URL}/clients`;
@@ -238,7 +241,11 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     { accessorKey: "feeCharged", header: "Cost", Cell: ({ cell }) => <Typography sx={{ fontWeight: 'bold', color: 'success.main' }}>${cell.getValue() || "0"}</Typography> },
   ], []);
 
-  const displayedClients = useMemo(() => clients.filter(c => normalize(c.status) === normalize(statusFilter)), [clients, statusFilter]);
+  const displayedClients = useMemo(() => {
+      // FIX: If a global filter is active, ignore the active/inactive toggle so it doesn't hide search results
+      if (globalFilter) return clients; 
+      return clients.filter(c => normalize(c.status) === normalize(statusFilter));
+  }, [clients, statusFilter, globalFilter]);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -256,10 +263,12 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       <MaterialReactTable
         columns={columns}
         data={displayedClients}
+        // FIX: Hooked up table state to the global filter
+        state={{ globalFilter }}
+        onGlobalFilterChange={setGlobalFilter}
         enableRowActions
         renderTopToolbarCustomActions={() => (
           <Box sx={{ display: 'flex', gap: '10px' }}>
-            {/* FIX: Hide Add Client Button if user is not admin */}
             {user?.role === 'admin' && (
               <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddModal}>Add New Client</Button>
             )}
@@ -274,7 +283,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
             <Tooltip title="Monthly Receipt"><IconButton onClick={() => handlePrintReceipt(row.original)} color="primary"><PdfIcon /></IconButton></Tooltip>
             <Tooltip title="Payment History"><IconButton onClick={() => handlePrintHistory(row.original)} color="info"><HistoryIcon /></IconButton></Tooltip>
             
-            {/* FIX: Hide Edit Client Button if user is not admin */}
             {user?.role === 'admin' && (
               <Tooltip title="Edit"><IconButton onClick={() => handleOpenEditModal(row.original)}><EditIcon /></IconButton></Tooltip>
             )}

@@ -116,11 +116,8 @@ export default function Dashboard({ user, onLogout }) {
   };
 
   const handleNavigateToClients = (ownerIdOrQuery) => {
-    if (typeof ownerIdOrQuery === 'number') {
-      setInitialClientFilter({ id: ownerIdOrQuery });
-    } else {
-      setInitialClientFilter(ownerIdOrQuery.toString());
-    }
+    // FIX: Always pass a string instead of an object to prevent crashing the table filter
+    setInitialClientFilter(String(ownerIdOrQuery));
     setInitialCarFilter("");
     setPermitFilter("");
     setCurrentPage("clients");
@@ -162,7 +159,6 @@ export default function Dashboard({ user, onLogout }) {
             <Paper elevation={0} sx={{ p: '24px', mb: '30px', borderRadius: '16px', border: '1px solid #eef2f6', background: '#fff', position: 'relative', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
                 <Typography variant="h6" sx={{ mb: 3, fontWeight: 700, color: '#1a2027' }}>Quick System Check</Typography>
                 
-                {/* --- UPDATED STATS SECTION WITH ACTIVE CARS --- */}
                 <Stack direction="row" spacing={4} sx={{ mb: 4 }} divider={<Divider orientation="vertical" flexItem />}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(25, 118, 210, 0.08)' }}><PeopleIcon color="primary" /></Box>
@@ -222,7 +218,8 @@ export default function Dashboard({ user, onLogout }) {
                                 <>
                                     <Typography variant="overline" sx={{ px: 2, pt: 1, display: 'block', fontWeight: 800, color: 'warning.main' }}>Matching Vehicles</Typography>
                                     {quickSearchResults.cars.map(car => (
-                                        <ListItem key={car.id} button onClick={() => handleNavigateToCars(car.license_plate)}>
+                                        // FIX: Strip carriage return before passing plate to next screen
+                                        <ListItem key={car.id} button onClick={() => handleNavigateToCars(car.license_plate?.split('\r')[0])}>
                                             <ListItemIcon><CarIcon color="warning" /></ListItemIcon>
                                             <ListItemText primary={car.license_plate?.split('\r')[0]} secondary={`${car.make} ${car.model || ''}`} />
                                             <Chip label="Vehicle" size="small" variant="outlined" />
