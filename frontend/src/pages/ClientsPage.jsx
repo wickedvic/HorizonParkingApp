@@ -123,7 +123,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       const activeClients = clients.filter(c => normalize(c.status) === 'active');
       const res = await fetch(`${API_BASE_URL}/process-mass-payment`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        // Send user.id as an integer to avoid SQL "Incorrect integer value" error
         body: JSON.stringify({ month: currentMonth, clients: activeClients, addedBy: user?.id || 1 }),
       });
       const data = await res.json();

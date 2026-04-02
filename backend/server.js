@@ -57,13 +57,25 @@ app.post("/clients", async (req, res) => {
   try {
     const [maxIdRow] = await pool.query("SELECT MAX(PeopleID) as maxId FROM People");
     const newId = (maxIdRow[0].maxId || 0) + 1;
-    const shortAddedBy = (addedBy || 'ADM').substring(0, 3).toUpperCase();
+    
+    // FIX: Safely handle addedBy. Convert to string only if it exists and is a string.
+    // If it's a number (ID), we use it as is or default to 'ADM'
+    let shortAddedBy = 'ADM';
+    if (addedBy) {
+      shortAddedBy = typeof addedBy === 'string' 
+        ? addedBy.substring(0, 3).toUpperCase() 
+        : addedBy.toString().substring(0, 3).toUpperCase();
+    }
+
     await pool.query(
       `INSERT INTO People (PeopleID, First, Last, Address, City, ST, zip, \`Cell Phone\`, \`Permit #\`, \`Fee Charged\`, EmailAddr, Company, Status, \`Client Type\`, CreditCardNum, CreditCardExpDate, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [newId, firstName, lastName, address || "", city || "", state || "", zip || "", phone || "", permitNumber || "", feeCharged || "120", email || "", company || "", status || 'active', type || 'tenant', ccNum || "", ccExp || "", shortAddedBy]
     );
     res.json({ success: true, id: newId });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    console.error("ADD CLIENT ERROR:", err.message);
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
 // UPDATE CLIENT ROUTE (FIXED 404 BY ALIGNING ENDPOINT)
