@@ -51,6 +51,7 @@ app.get("/clients", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ADD CLIENT ROUTE
 app.post("/clients", async (req, res) => {
   const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp, addedBy } = req.body;
   try {
@@ -59,9 +60,22 @@ app.post("/clients", async (req, res) => {
     const shortAddedBy = (addedBy || 'ADM').substring(0, 3).toUpperCase();
     await pool.query(
       `INSERT INTO People (PeopleID, First, Last, Address, City, ST, zip, \`Cell Phone\`, \`Permit #\`, \`Fee Charged\`, EmailAddr, Company, Status, \`Client Type\`, CreditCardNum, CreditCardExpDate, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [newId, firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status || 'active', type || 'tenant', ccNum, ccExp, shortAddedBy]
+      [newId, firstName, lastName, address || "", city || "", state || "", zip || "", phone || "", permitNumber || "", feeCharged || "120", email || "", company || "", status || 'active', type || 'tenant', ccNum || "", ccExp || "", shortAddedBy]
     );
     res.json({ success: true, id: newId });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// UPDATE CLIENT ROUTE (FIXED 404 BY ALIGNING ENDPOINT)
+app.put("/clients/:id", async (req, res) => {
+  const { id } = req.params;
+  const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp } = req.body;
+  try {
+    await pool.query(
+      `UPDATE People SET First = ?, Last = ?, Address = ?, City = ?, ST = ?, zip = ?, \`Cell Phone\` = ?, \`Permit #\` = ?, \`Fee Charged\` = ?, EmailAddr = ?, Company = ?, Status = ?, \`Client Type\` = ?, CreditCardNum = ?, CreditCardExpDate = ? WHERE PeopleID = ?`,
+      [firstName, lastName, address || "", city || "", state || "", zip || "", phone || "", permitNumber || "", feeCharged || "0", email || "", company || "", status, type, ccNum || "", ccExp || "", id]
+    );
+    res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

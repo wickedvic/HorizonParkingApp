@@ -83,10 +83,10 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const handleCloseModal = () => setModalOpen(false);
 
   const handleFormSubmit = async () => {
+    // API_BASE_URL handles the root. Backend listening on /clients and /clients/:id
     const url = isEditMode ? `${API_BASE_URL}/clients/${formData.id}` : `${API_BASE_URL}/clients`;
     const method = isEditMode ? "PUT" : "POST";
     
-    // Add logic for Add Client specific fields
     const payload = isEditMode ? formData : {
         ...formData,
         address: "", city: "", state: "", zip: "", phone: "", email: "", company: "",
@@ -147,7 +147,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       <MaterialReactTable
         columns={columns}
         data={displayedClients}
-        enableEditing={false} // We handle custom editing
+        enableEditing={false}
         renderTopToolbarCustomActions={() => (
           <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddModal}>Add New Client</Button>
         )}
