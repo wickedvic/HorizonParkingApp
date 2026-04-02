@@ -232,6 +232,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     } catch (err) { console.error(err); }
   };
 
+  // --- SEPARATED ADD CLIENT LOGIC ---
   const handleCreateClient = async ({ values, table }) => {
     const payload = { 
         firstName: values.firstName || "",
@@ -243,17 +244,14 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         status: normalize(values.status || 'active'), 
         type: normalize(values.type || 'tenant'),
         ccNum: "", ccExp: "",
-        // Truncate to 3 chars for DB varchar(3) limit
         addedBy: (user?.username || 'ADM').substring(0, 3).toUpperCase() 
     };
     try {
       const res = await fetch(`${API_BASE_URL}/clients`, {
-        method: "POST", 
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       if (res.ok) { 
-        // FIX: Ensure ID is updated by awaiting the data reload
         await loadClients(); 
         table.setCreatingRow(null); 
       } else { 
@@ -263,11 +261,27 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     } catch (err) { console.error(err); }
   };
 
+  // --- SEPARATED EDIT CLIENT LOGIC ---
   const handleSaveClient = async ({ values, row, table }) => {
+    // Only map the fields that are actually allowed to be updated to avoid nulling out database values
     const payload = { 
-        ...values, 
-        status: normalize(values.status),
-        type: values.type
+        firstName: values.firstName,
+        lastName: values.lastName,
+        type: values.type,
+        status: values.status,
+        permitNumber: values.permitNumber,
+        feeCharged: values.feeCharged,
+        // Preserve other fields if your backend supports partial updates, 
+        // otherwise pass existing row values
+        address: row.original.address || "",
+        city: row.original.city || "",
+        state: row.original.state || "",
+        zip: row.original.zip || "",
+        phone: row.original.phone || "",
+        email: row.original.email || "",
+        company: row.original.company || "",
+        ccNum: row.original.ccNum || "",
+        ccExp: row.original.ccExp || ""
     };
     try {
       const res = await fetch(`${API_BASE_URL}/clients/${row.original.id}`, {
@@ -325,8 +339,17 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         />
       )
     },
-    { accessorKey: "permitNumber", header: "Permit #", Cell: ({ cell }) => cell.getValue() ? cell.getValue().split(',').map((p, i) => <Chip key={i} label={p.trim()} size="small" sx={{ mr: 0.5 }} variant="outlined" color="primary" />) : 'N/A' },
-    { accessorKey: "feeCharged", header: "Cost", Cell: ({ cell }) => <Typography sx={{ fontWeight: 'bold', color: 'success.main' }}>${cell.getValue() || "0"}</Typography> },
+    // MOVED THESE TO CORE COLUMNS SO THEY ARE ACCESSIBLE IN THE 'VALUES' OBJECT FOR EDITING
+    { 
+      accessorKey: "permitNumber", 
+      header: "Permit #", 
+      Cell: ({ cell }) => cell.getValue() ? cell.getValue().split(',').map((p, i) => <Chip key={i} label={p.trim()} size="small" sx={{ mr: 0.5 }} variant="outlined" color="primary" />) : 'N/A' 
+    },
+    { 
+      accessorKey: "feeCharged", 
+      header: "Cost", 
+      Cell: ({ cell }) => <Typography sx={{ fontWeight: 'bold', color: 'success.main' }}>${cell.getValue() || "0"}</Typography> 
+    },
   ], []);
 
   return (
@@ -357,7 +380,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
             editRowModalTitle: 'Edit Client',
         }}
         renderTopToolbarCustomActions={({ table }) => {
-          // Safety check to prevent standard initialization errors
           if (!table) return null;
           return (
             <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
