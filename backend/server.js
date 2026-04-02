@@ -155,7 +155,7 @@ app.get("/permits", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM DailyPermit ORDER BY AddedTS DESC");
     
-    // FIX: Filter out any permits that have a null or undefined TempPermitID before sending to frontend
+    // Confirmed filter logic to strip out null TempPermitIDs
     const cleanedRows = rows.filter(permit => {
       if (!permit.TempPermitID) return false;
       return true;

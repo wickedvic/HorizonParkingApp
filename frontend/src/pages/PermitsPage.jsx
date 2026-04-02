@@ -44,7 +44,6 @@ export default function PermitsPage({ user, initialFilter }) {
   }
 
   const handleDeletePermit = async (tempPermitId) => {
-    // Check for ID presence 
     if (!tempPermitId) {
       alert("Error: Record ID is missing. This record cannot be deleted via the UI until it has a valid TempPermitID.");
       return;
@@ -60,15 +59,24 @@ export default function PermitsPage({ user, initialFilter }) {
     } catch (err) { console.error(err); }
   }
 
+  // FIX: Force raw date parsing to avoid UTC to EDT timezone shifting
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
-    const dateObj = new Date(dateString);
-    if (isNaN(dateObj.getTime())) return "Invalid";
-    return dateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    try {
+      // Extract just the YYYY-MM-DD part regardless of string format
+      const datePart = typeof dateString === 'string' ? dateString.split("T")[0] : new Date(dateString).toISOString().split("T")[0];
+      const [year, month, day] = datePart.split('-');
+      if (!year || !month || !day) return "Invalid";
+      
+      // Build date in local timezone directly
+      const dateObj = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
+      return dateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch (e) {
+      return "Invalid";
+    }
   };
 
   const handlePrintPermit = (permit) => {
-    // FIX: Use specific Date Range as primary heading [cite: 7]
     const rangeHeader = `${formatDate(permit.PermitStartDate)} - ${formatDate(permit.PermitEndDate)}`;
     
     const printWindow = window.open('', '_blank');
@@ -108,7 +116,6 @@ export default function PermitsPage({ user, initialFilter }) {
 
   const handleAddPermit = async (e) => {
     e.preventDefault()
-    // Generate the Permit ID string 
     const generatedPermitNum = `T-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     const payload = { ...formData, permit_number: generatedPermitNum };
 
@@ -121,7 +128,6 @@ export default function PermitsPage({ user, initialFilter }) {
       if (res.ok) {
         const responseData = await res.json();
         
-        // Auto-print data needs the newly generated fields [cite: 4, 6, 7]
         const newPermitPrintData = {
           UserName: formData.user_name,
           PermitStartDate: formData.start_date,
@@ -133,7 +139,6 @@ export default function PermitsPage({ user, initialFilter }) {
         setShowForm(false)
         setFormData({ ...formData, user_name: "" })
         
-        // Auto-open PDF immediately upon creation
         handlePrintPermit(newPermitPrintData);
       } else {
         const errorData = await res.json();
@@ -142,13 +147,16 @@ export default function PermitsPage({ user, initialFilter }) {
     } catch (err) { console.error(err) }
   }
 
+  // FIX: Apply the timezone safe parsing logic to the data filter
   const filteredPermits = useMemo(() => {
     return permits.filter(p => {
       if (!p.PermitStartDate) return false;
-      const dateObj = new Date(p.PermitStartDate);
-      if (isNaN(dateObj.getTime())) return false;
-      const pDate = dateObj.toISOString().split("T")[0];
-      return pDate >= dateRange.start && pDate <= dateRange.end;
+      try {
+        const pDate = typeof p.PermitStartDate === 'string' ? p.PermitStartDate.split("T")[0] : new Date(p.PermitStartDate).toISOString().split("T")[0];
+        return pDate >= dateRange.start && pDate <= dateRange.end;
+      } catch(e) {
+        return false;
+      }
     });
   }, [permits, dateRange]);
 
