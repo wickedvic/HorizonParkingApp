@@ -51,14 +51,18 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   // --- MODAL HANDLERS ---
   const handleOpenAddModal = () => {
     setIsEditMode(false);
-    // Reset EVERYTHING for new vehicle. Use empty string instead of null for safer state handling.
     setFormData({ id: '', license_plate: '', make: '', model: '', year: '', color: '', owner_id: '' });
     setModalOpen(true);
   };
 
   const handleOpenEditModal = (carRow) => {
+    if (!carRow.id) {
+       loadCars();
+       alert("Synchronizing with database, please click edit again.");
+       return;
+    }
+
     setIsEditMode(true);
-    // FIX: Extract data robustly from the row object
     setFormData({
       id: carRow.id || '', 
       license_plate: carRow.license_plate || '',
@@ -74,7 +78,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   const handleCloseModal = () => setModalOpen(false);
 
   const handleFormSubmit = async () => {
-    // FIX: Verify ID exists if editing, using a strict check against empty string/undefined
     if (isEditMode && (!formData.id || formData.id === '')) {
         alert("Error: Vehicle ID is missing. The system cannot update an unknown record.");
         return;
@@ -83,14 +86,12 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
     const url = isEditMode ? `${API_BASE_URL}/cars/${formData.id}` : `${API_BASE_URL}/cars`;
     const method = isEditMode ? "PUT" : "POST";
     
-    // Clean payload before sending
     const payload = {
         license_plate: formData.license_plate,
         make: formData.make,
         model: formData.model,
         year: formData.year,
         color: formData.color,
-        // Convert empty string owner_id back to pure null for SQL
         owner_id: formData.owner_id === '' ? null : formData.owner_id,
         addedBy: (user?.username || 'ADM').substring(0, 3).toUpperCase()
     };
@@ -225,7 +226,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
                     <TextField fullWidth label="Color" value={formData.color} onChange={(e) => setFormData({...formData, color: e.target.value})} />
                 </Grid>
                 <Grid item xs={12}>
-                    <TextField select fullWidth label="Owner" value={formData.owner_id} onChange={(e) => setFormData({...formData, owner_id: e.target.value})}>
+                    <TextField select fullWidth label="Owner" value={formData.owner_id || ''} onChange={(e) => setFormData({...formData, owner_id: e.target.value})}>
                         <MenuItem value=""><em>None</em></MenuItem>
                         {clients.map((c) => (
                             <MenuItem key={c.id} value={c.id}>

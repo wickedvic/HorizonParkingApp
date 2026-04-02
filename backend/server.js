@@ -58,8 +58,6 @@ app.post("/clients", async (req, res) => {
     const [maxIdRow] = await pool.query("SELECT MAX(PeopleID) as maxId FROM People");
     const newId = (maxIdRow[0].maxId || 0) + 1;
     
-    // FIX: Safely handle addedBy. Convert to string only if it exists and is a string.
-    // If it's a number (ID), we use it as is or default to 'ADM'
     let shortAddedBy = 'ADM';
     if (addedBy) {
       shortAddedBy = typeof addedBy === 'string' 
@@ -78,7 +76,7 @@ app.post("/clients", async (req, res) => {
   }
 });
 
-// UPDATE CLIENT ROUTE (FIXED 404 BY ALIGNING ENDPOINT)
+// UPDATE CLIENT ROUTE
 app.put("/clients/:id", async (req, res) => {
   const { id } = req.params;
   const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp } = req.body;
@@ -107,18 +105,21 @@ app.post("/cars", async (req, res) => {
   try {
     const shortAddedBy = (addedBy || 'ADM').substring(0, 3).toUpperCase();
 
-    const [result] = await pool.query(
-      `INSERT INTO Cars (\`Car Make\`, Model, Color, Year, License, Owner, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`, 
-      [make || "", model || "", color || "", year || "", license_plate || "", owner_id || null, shortAddedBy]
+    // FIX: Calculate the next Vehicle ID manually, matching the Clients logic
+    const [maxIdRow] = await pool.query("SELECT MAX(`Car ID#`) as maxId FROM Cars");
+    const newId = (maxIdRow[0].maxId || 0) + 1;
+
+    await pool.query(
+      `INSERT INTO Cars (\`Car ID#\`, \`Car Make\`, Model, Color, Year, License, Owner, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`, 
+      [newId, make || "", model || "", color || "", year || "", license_plate || "", owner_id || null, shortAddedBy]
     );
-    res.json({ success: true, id: result.insertId });
+    res.json({ success: true, id: newId });
   } catch (err) { 
     console.error("ADD CAR ERROR:", err.message);
     res.status(500).json({ error: err.message }); 
   }
 });
 
-// FIX: Added guardrails against null or invalid IDs to prevent SQL DOUBLE errors
 app.put("/cars/:id", async (req, res) => {
   const { id } = req.params;
   const { make, model, color, year, license_plate, owner_id } = req.body;
@@ -177,14 +178,12 @@ app.delete("/permits/:id", async (req, res) => {
 
 // --- PAYMENTS ---
 app.post("/process-mass-payment", async (req, res) => {
-  const { month, clients, addedBy } = req.body; // addedBy is now an integer ID
+  const { month, clients, addedBy } = req.body; 
   const connection = await pool.getConnection();
 
   try {
     await connection.beginTransaction();
 
-    // 1. Log the mass payment attempt
-    // AddedBy here is an integer ID to match column type
     await connection.query(
       "INSERT INTO MassPaymentsLog (MonthProcessed, DateProcessed, AddedBy) VALUES (?, NOW(), ?)", 
       [month, addedBy]
@@ -194,14 +193,12 @@ app.post("/process-mass-payment", async (req, res) => {
     let skippedCount = 0;
 
     for (const client of clients) {
-      // 2. CHECK FOR DUPLICATE
       const [existing] = await connection.query(
         "SELECT ID FROM Payments WHERE Payer = ? AND `Payment Month` = ?",
         [client.id, month]
       );
 
       if (existing.length === 0) {
-        // 3. Insert payment
         await connection.query(
           "INSERT INTO Payments (Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy) VALUES (?, ?, ?, NOW(), ?)", 
           [client.id, month, client.feeCharged || "120", addedBy]
