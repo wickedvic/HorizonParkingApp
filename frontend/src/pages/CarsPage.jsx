@@ -57,10 +57,9 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   const handleOpenEditModal = (car) => {
     setIsEditMode(true);
-    // FIX: MRT rows sometimes store the ID in different formats. 
-    // We check car.id (our mapped name) to ensure the PUT URL is valid.
+    // FIX: Map fields specifically ensuring 'id' is extracted from the row data
     setFormData({
-      id: car.id || null, 
+      id: car.id, 
       license_plate: car.license_plate || '',
       make: car.make || '',
       model: car.model || '',
@@ -74,9 +73,9 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   const handleCloseModal = () => setModalOpen(false);
 
   const handleFormSubmit = async () => {
-    // Check for ID specifically in edit mode to prevent the /null URL error
-    if (isEditMode && (formData.id === null || formData.id === undefined)) {
-        alert("Error: Vehicle ID is missing from the form data. Please try reopening the edit window.");
+    // Safety check for ID in edit mode
+    if (isEditMode && !formData.id) {
+        alert("Error: Vehicle ID is missing from the form data.");
         return;
     }
 
@@ -84,11 +83,8 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
     const method = isEditMode ? "PUT" : "POST";
     
     const payload = {
-        make: formData.make || "",
-        model: formData.model || "",
-        color: formData.color || "",
-        year: formData.year || "",
-        license_plate: formData.license_plate || "",
+        ...formData,
+        // Ensure owner_id is null if not selected to avoid DB errors
         owner_id: formData.owner_id || null,
         addedBy: (user?.username || 'ADM').substring(0, 3).toUpperCase()
     };
@@ -162,6 +158,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
               variant="body2" 
               sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }} 
               onClick={() => {
+                // Navigate to client page and filter by ID
                 if (ownerId) {
                   onNavigateClient({ id: ownerId });
                 } else {
@@ -169,7 +166,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
                 }
               }}
             >
-              {nameStr !== "" ? nameStr : `ID: ${ownerId}`}
+              {nameStr !== "" ? nameStr : `ID: ${row.original.owner_id}`}
             </Link>
           </Box>
         );
@@ -203,7 +200,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         )}
         renderRowActions={({ row }) => (
           <Box sx={{ display: 'flex', gap: '0.5rem' }}>
-            {/* PASS row.original TO ENSURE ALL DATA IS PRESENT */}
             <Tooltip title="Edit"><IconButton onClick={() => handleOpenEditModal(row.original)}><EditIcon /></IconButton></Tooltip>
             {user?.role === "admin" && <Tooltip title="Delete"><IconButton color="error" onClick={() => handleDeleteCar(row.original.id, row.original.license_plate)}><DeleteIcon /></IconButton></Tooltip>}
           </Box>
