@@ -92,7 +92,6 @@ app.get("/cars", async (req, res) => {
   try {
     const [rows] = await pool.query(`SELECT c.*, p.First as ownerFirst, p.Last as ownerLast FROM Cars c LEFT JOIN People p ON c.Owner = p.PeopleID`);
     
-    // FIX: Filter out any vehicles that have a null or undefined ID before sending to frontend
     const cleanedRows = rows.filter(car => {
       if (!car['Car ID#']) return false;
       return true;
@@ -155,7 +154,14 @@ app.delete("/cars/:id", async (req, res) => {
 app.get("/permits", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM DailyPermit ORDER BY AddedTS DESC");
-    res.json(rows);
+    
+    // FIX: Filter out any permits that have a null or undefined TempPermitID before sending to frontend
+    const cleanedRows = rows.filter(permit => {
+      if (!permit.TempPermitID) return false;
+      return true;
+    });
+
+    res.json(cleanedRows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
