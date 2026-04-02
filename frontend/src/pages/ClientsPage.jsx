@@ -5,14 +5,13 @@ import API_BASE_URL from "../api.js"
 import {
   Box, Typography, Chip, List, ListItem, ListItemText, Divider,
   ToggleButton, ToggleButtonGroup, Stack, Grid, Button, Paper, Link, Tooltip,
-  IconButton
+  IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem
 } from "@mui/material";
 import { 
   DirectionsCar as CarIcon, 
   Badge as PermitIcon, 
   Add as AddIcon, 
   Edit as EditIcon, 
-  Info as InfoIcon,
   PictureAsPdf as PdfIcon,
   Payments as CashIcon,
   History as HistoryIcon,
@@ -22,11 +21,7 @@ import {
 import { MaterialReactTable } from 'material-react-table';
 import { mkConfig, generateCsv, download } from 'export-to-csv'; 
 
-const csvConfigBase = {
-  fieldSeparator: ',',
-  decimalSeparator: '.',
-  useKeysAsHeaders: true,
-};
+const csvConfigBase = { fieldSeparator: ',', decimalSeparator: '.', useKeysAsHeaders: true };
 
 export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, initialFilter }) {
   const [clients, setClients] = useState([]);
@@ -34,6 +29,11 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const [payments, setPayments] = useState([]);
   const [statusFilter, setStatusFilter] = useState("active");
   
+  // MODAL STATES
+  const [modalOpen, setModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [formData, setFormData] = useState({ firstName: '', lastName: '', type: 'tenant', status: 'active', permitNumber: '', feeCharged: '120', id: null });
+
   const [globalFilter, setGlobalFilter] = useState("");
   const [columnFilters, setColumnFilters] = useState([]);
 
@@ -42,16 +42,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   }, []);
 
   const normalize = (val) => val?.toString().toLowerCase().trim() || "";
-
-  useEffect(() => {
-    if (initialFilter && typeof initialFilter === 'object' && initialFilter.id) {
-      setGlobalFilter("");
-      setColumnFilters([{ id: 'id', value: initialFilter.id.toString() }]);
-    } else {
-      setGlobalFilter(initialFilter || "");
-      setColumnFilters([]);
-    }
-  }, [initialFilter]);
 
   const loadClients = async () => {
     try {
@@ -77,351 +67,138 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     } catch (err) { console.error(err); }
   }
 
-  const handleExportByStatus = (status) => {
-    const filteredData = clients.filter(c => normalize(c.status) === normalize(status));
-    const config = mkConfig({ ...csvConfigBase, filename: `${status}-clients-export` });
-    const csv = generateCsv(config)(filteredData);
-    download(config)(csv);
+  // --- MODAL HANDLERS ---
+  const handleOpenAddModal = () => {
+    setIsEditMode(false);
+    setFormData({ firstName: '', lastName: '', type: 'tenant', status: 'active', permitNumber: '', feeCharged: '120', id: null });
+    setModalOpen(true);
   };
 
-  const handleExportAll = () => {
-    const config = mkConfig({ ...csvConfigBase, filename: 'all-clients-export' });
-    const csv = generateCsv(config)(clients);
-    download(config)(csv);
+  const handleOpenEditModal = (client) => {
+    setIsEditMode(true);
+    setFormData({ ...client });
+    setModalOpen(true);
   };
 
-  const handlePrintPermit = (client) => {
-    const clientVehicles = allCars.filter(car => car.owner_id == client.id);
-    const monthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Parking Permit - ${client.lastName}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 40px; text-align: center; }
-            .header { border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; }
-            .logo { background: #444; color: white; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-weight: bold; }
-            h1 { font-size: 48px; color: #d32f2f; margin: 20px 0; }
-            .address { font-size: 18px; margin-bottom: 30px; }
-            .permit-label { font-size: 32px; font-weight: bold; text-decoration: underline; }
-            .date-highlight { font-size: 56px; color: #d32f2f; font-weight: bold; margin: 20px 0; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { border: 1px solid black; padding: 8px; text-align: left; }
-            .signature { margin-top: 60px; text-align: right; font-size: 20px; color: #d32f2f; }
-          </style>
-        </head>
-        <body>
-          <div class="header"><div class="logo">H</div><div style="font-size: 28px; font-weight: bold;">2020 Partners, LLC</div></div>
-          <h1>Parking Permit</h1>
-          <div class="address">20 Jerusalem Ave<br/>Hicksville, NY</div>
-          <div class="permit-label">Permit #: ${client.permitNumber || ''}</div>
-          <div class="date-highlight">${monthYear}</div>
-          <div style="text-align:left; font-weight:bold; text-decoration:underline;">Cars Info</div>
-          <table>
-            <thead><tr><th>Car Make</th><th>Model</th><th>Color</th><th>Year</th><th>License</th></tr></thead>
-            <tbody>
-              ${clientVehicles.map(car => `<tr><td>${car.make}</td><td>${car.model}</td><td>${car.color}</td><td>${car.year}</td><td>${car.license_plate?.split('\r')[0]}</td></tr>`).join('')}
-            </tbody>
-          </table>
-          <div class="signature">X __________________________________________</div>
-          <div style="margin-top:40px;">Feel free to call with any questions: Phone: 516-328-2020</div>
-          <script>window.print();</script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
+  const handleCloseModal = () => setModalOpen(false);
 
-  const handlePrintReceipt = (client) => {
-    const defaultMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-    const selectedMonth = window.prompt("Enter the Effective Month/Year for this receipt:", defaultMonth);
-    if (selectedMonth === null) return; 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Payment Receipt - ${client.lastName}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 50px; text-align: center; }
-            .receipt-box { border: 1px solid black; padding: 40px; margin: 20px auto; width: 450px; text-align: left; }
-            .header { display: flex; align-items: center; justify-content: center; margin-bottom: 5px; }
-            .logo { background: #444; color: white; width: 40px; height: 40px; line-height: 40px; margin-right: 10px; font-weight: bold; text-align: center;}
-            .title { font-size: 22px; font-weight: bold; border-bottom: 1px solid black; display: inline-block; margin-bottom: 30px; }
-            .row { margin: 15px 0; font-size: 16px; display: flex; justify-content: space-between; }
-            .value { text-decoration: underline; }
-            .footer { margin-top: 100px; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="header"><div class="logo">H</div><div style="font-size: 20px;">20/20 Partners</div></div>
-          <div class="title">Parking Payment Receipt</div>
-          <div class="receipt-box">
-            <div class="row"><span>Client Name:</span> <span class="value">${client.lastName}, ${client.firstName}</span></div>
-            <div class="row"><span>Permit #:</span> <span class="value">${client.permitNumber || ''}</span></div>
-            <div class="row"><span>Paid:</span> <span class="value">$${client.feeCharged || '0'}.00</span></div>
-            <div class="row"><span>Effective Month:</span> <span class="value">${selectedMonth}</span></div>
-          </div>
-          <div class="footer">Printed on: ${new Date().toLocaleString()}</div>
-          <script>window.print();</script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
-
-  const handlePrintHistory = (client) => {
-    const clientPayments = payments.filter(p => p.payer == client.id);
-    const mid = Math.ceil(clientPayments.length / 2);
-    const leftCol = clientPayments.slice(0, mid);
-    const rightCol = clientPayments.slice(mid);
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Payment History - ${client.lastName}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 30px; }
-            .title-box { border: 1px solid black; width: 200px; margin: 0 auto 20px auto; text-align: center; font-weight: bold; padding: 5px; }
-            .header-info { border: 1px solid black; padding: 10px; display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 20px; }
-            .flex-container { display: flex; gap: 20px; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            th, td { border: 1px solid black; padding: 4px; text-align: left; }
-          </style>
-        </head>
-        <body>
-          <div class="title-box">Payment History</div>
-          <div class="header-info">
-            <div><div style="background:#444;color:white;width:30px;text-align:center;margin-bottom:5px;">H</div>${client.lastName}, ${client.firstName}<br/>Client Type: ${client.type || 'Payer'}</div>
-            <div style="text-align:right;">Method of Payment: ${client.paymentType || 'Credit Card'}<br/>Monthly Fee: $${client.feeCharged || '0'}.00</div>
-          </div>
-          <div class="flex-container">
-            <div style="flex:1;">
-                <table><thead><tr><th>Payment Month</th><th>Amount</th></tr></thead>
-                <tbody>${leftCol.map(p => `<tr><td>${p.month}</td><td>$${p.amount}.00</td></tr>`).join('')}</tbody>
-                </table>
-            </div>
-            <div style="flex:1;">
-                <table><thead><tr><th>Payment Month</th><th>Amount</th></tr></thead>
-                <tbody>${rightCol.map(p => `<tr><td>${p.month}</td><td>$${p.amount}.00</td></tr>`).join('')}</tbody>
-                </table>
-            </div>
-          </div>
-          <script>window.print();</script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
-
-  const handleMassPayment = async () => {
-    const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-    if (!window.confirm(`Process mass payments for ${currentMonth}?`)) return;
-    try {
-      const logRes = await fetch(`${API_BASE_URL}/mass-payments-log`);
-      const logs = await logRes.json();
-      if (logs.some(log => normalize(log.MonthProcessed) === normalize(currentMonth))) {
-        alert(`Already processed for ${currentMonth}.`); return;
-      }
-      const activeClients = clients.filter(c => normalize(c.status) === 'active');
-      const res = await fetch(`${API_BASE_URL}/process-mass-payment`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ month: currentMonth, clients: activeClients, addedBy: (user?.username || 'ADM').substring(0, 3) }),
-      });
-      if (res.ok) { alert("Payments processed."); loadPayments(); }
-    } catch (err) { console.error(err); }
-  };
-
-  // --- SEPARATED ADD CLIENT LOGIC ---
-  const handleCreateClient = async ({ values, table }) => {
-    const payload = { 
-        firstName: values.firstName || "",
-        lastName: values.lastName || "",
-        address: "", city: "", state: "", zip: "", phone: "",
-        permitNumber: values.permitNumber || `P-${Math.floor(1000 + Math.random() * 9000)}`, 
-        feeCharged: values.feeCharged || "120", 
-        email: "", company: "",
-        status: normalize(values.status || 'active'), 
-        type: normalize(values.type || 'tenant'),
+  const handleFormSubmit = async () => {
+    const url = isEditMode ? `${API_BASE_URL}/clients/${formData.id}` : `${API_BASE_URL}/clients`;
+    const method = isEditMode ? "PUT" : "POST";
+    
+    // Add logic for Add Client specific fields
+    const payload = isEditMode ? formData : {
+        ...formData,
+        address: "", city: "", state: "", zip: "", phone: "", email: "", company: "",
         ccNum: "", ccExp: "",
-        addedBy: (user?.username || 'ADM').substring(0, 3).toUpperCase() 
+        addedBy: (user?.username || 'ADM').substring(0, 3).toUpperCase()
     };
-    try {
-      const res = await fetch(`${API_BASE_URL}/clients`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) { 
-        await loadClients(); 
-        table.setCreatingRow(null); 
-      } else { 
-        const errData = await res.json();
-        alert(`Failed to add client: ${errData.error}`); 
-      }
-    } catch (err) { console.error(err); }
-  };
 
-  // --- SEPARATED EDIT CLIENT LOGIC ---
-  const handleSaveClient = async ({ values, row, table }) => {
-    // Only map the fields that are actually allowed to be updated to avoid nulling out database values
-    const payload = { 
-        firstName: values.firstName,
-        lastName: values.lastName,
-        type: values.type,
-        status: values.status,
-        permitNumber: values.permitNumber,
-        feeCharged: values.feeCharged,
-        // Preserve other fields if your backend supports partial updates, 
-        // otherwise pass existing row values
-        address: row.original.address || "",
-        city: row.original.city || "",
-        state: row.original.state || "",
-        zip: row.original.zip || "",
-        phone: row.original.phone || "",
-        email: row.original.email || "",
-        company: row.original.company || "",
-        ccNum: row.original.ccNum || "",
-        ccExp: row.original.ccExp || ""
-    };
     try {
-      const res = await fetch(`${API_BASE_URL}/clients/${row.original.id}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (res.ok) { 
+      if (res.ok) {
         await loadClients();
-        table.setEditingRow(null); 
+        handleCloseModal();
+      } else {
+        const err = await res.json();
+        alert(`Error: ${err.error}`);
       }
     } catch (err) { console.error(err); }
   };
-
-  const displayedClients = useMemo(() => 
-    clients.filter(c => normalize(c.status) === normalize(statusFilter)), 
-    [clients, statusFilter]
-  );
 
   const columns = useMemo(() => [
-    { accessorKey: "id", header: "ID", enableEditing: false, size: 80, filterFn: 'equals' },
-    { accessorKey: "firstName", header: "First Name", muiEditTextFieldProps: { required: true } },
-    { accessorKey: "lastName", header: "Last Name", muiEditTextFieldProps: { required: true } },
+    { accessorKey: "id", header: "ID", size: 80 },
+    { accessorKey: "firstName", header: "First Name" },
+    { accessorKey: "lastName", header: "Last Name" },
     { 
         accessorKey: "type", 
         header: "Type", 
-        editVariant: 'select', 
-        editSelectOptions: [
-          { label: 'Tenant', value: 'tenant' }, 
-          { label: 'Employee', value: 'employee' },
-          { label: 'Payer', value: 'payer' }
-        ],
-        muiEditTextFieldProps: ({ row }) => ({
-          select: true,
-          defaultValue: row?.original?.type || 'tenant', 
-        }),
-        Cell: ({ cell }) => <Chip label={cell.getValue()?.charAt(0).toUpperCase() + cell.getValue()?.slice(1)} variant="outlined" size="small" />
+        Cell: ({ cell }) => <Chip label={cell.getValue()?.toUpperCase()} variant="outlined" size="small" />
     },
     { 
       accessorKey: "status", 
       header: "Status", 
-      editVariant: 'select', 
-      editSelectOptions: [
-        { label: 'Active', value: 'active' }, 
-        { label: 'Inactive', value: 'inactive' }
-      ],
-      muiEditTextFieldProps: ({ row }) => ({
-        select: true,
-        defaultValue: normalize(row?.original?.status || 'active'), 
-      }),
       Cell: ({ cell }) => (
-        <Chip 
-          label={cell.getValue()?.toUpperCase()} 
-          color={normalize(cell.getValue()) === 'active' ? 'success' : 'default'} 
-          size="small" 
-        />
+        <Chip label={cell.getValue()?.toUpperCase()} color={normalize(cell.getValue()) === 'active' ? 'success' : 'default'} size="small" />
       )
     },
-    // MOVED THESE TO CORE COLUMNS SO THEY ARE ACCESSIBLE IN THE 'VALUES' OBJECT FOR EDITING
-    { 
-      accessorKey: "permitNumber", 
-      header: "Permit #", 
-      Cell: ({ cell }) => cell.getValue() ? cell.getValue().split(',').map((p, i) => <Chip key={i} label={p.trim()} size="small" sx={{ mr: 0.5 }} variant="outlined" color="primary" />) : 'N/A' 
-    },
-    { 
-      accessorKey: "feeCharged", 
-      header: "Cost", 
-      Cell: ({ cell }) => <Typography sx={{ fontWeight: 'bold', color: 'success.main' }}>${cell.getValue() || "0"}</Typography> 
-    },
+    { accessorKey: "permitNumber", header: "Permit #" },
+    { accessorKey: "feeCharged", header: "Cost", Cell: ({ cell }) => <Typography sx={{ fontWeight: 'bold', color: 'success.main' }}>${cell.getValue() || "0"}</Typography> },
   ], []);
+
+  const displayedClients = useMemo(() => clients.filter(c => normalize(c.status) === normalize(statusFilter)), [clients, statusFilter]);
 
   return (
     <Box sx={{ p: 3 }}>
       <Stack direction="row" justifyContent="space-between" sx={{ mb: 3 }}>
-        <Box><Typography variant="h4" sx={{ fontWeight: 'bold' }}>Client Directory</Typography></Box>
+        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Client Directory</Typography>
         <Stack direction="row" spacing={2}>
-          {user?.role === 'admin' && <Button variant="outlined" color="success" startIcon={<CashIcon />} onClick={handleMassPayment}>Run Mass Payment</Button>}
-          <ToggleButtonGroup color="primary" value={statusFilter} exclusive onChange={(e, v) => v && setStatusFilter(v)} size="small">
-            <ToggleButton value="active">Active</ToggleButton>
-            <ToggleButton value="inactive">Inactive</ToggleButton>
-          </ToggleButtonGroup>
+            <ToggleButtonGroup color="primary" value={statusFilter} exclusive onChange={(e, v) => v && setStatusFilter(v)} size="small">
+                <ToggleButton value="active">Active</ToggleButton>
+                <ToggleButton value="inactive">Inactive</ToggleButton>
+            </ToggleButtonGroup>
         </Stack>
       </Stack>
 
       <MaterialReactTable
         columns={columns}
         data={displayedClients}
-        editDisplayMode="modal"
-        enableEditing
-        onEditingRowSave={handleSaveClient}
-        onCreatingRowSave={handleCreateClient}
-        state={{ globalFilter, columnFilters }}
-        onGlobalFilterChange={setGlobalFilter}
-        onColumnFiltersChange={setColumnFilters}
-        localization={{
-            createRowModalTitle: 'Add New Client',
-            editRowModalTitle: 'Edit Client',
-        }}
-        renderTopToolbarCustomActions={({ table }) => {
-          if (!table) return null;
-          return (
-            <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <Button 
-                  variant="contained" 
-                  startIcon={<AddIcon />} 
-                  onClick={() => table.setCreatingRow(true)}
-              >
-                  Add New Client
-              </Button>
-              <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
-              <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
-              <Button startIcon={<FileDownloadIcon />} onClick={handleExportAll} variant="outlined" size="small">Export All</Button>
-            </Box>
-          );
-        }}
-        renderRowActions={({ row, table }) => (
+        enableEditing={false} // We handle custom editing
+        renderTopToolbarCustomActions={() => (
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddModal}>Add New Client</Button>
+        )}
+        renderRowActions={({ row }) => (
           <Stack direction="row" spacing={0.5}>
-            <Tooltip title="Parking Permit"><IconButton onClick={() => handlePrintPermit(row.original)} color="error"><ParkingIcon /></IconButton></Tooltip>
-            <Tooltip title="Monthly Receipt"><IconButton onClick={() => handlePrintReceipt(row.original)} color="primary"><PdfIcon /></IconButton></Tooltip>
-            <Tooltip title="Payment History"><IconButton onClick={() => handlePrintHistory(row.original)} color="info"><HistoryIcon /></IconButton></Tooltip>
-            <Tooltip title="Edit"><IconButton onClick={() => table.setEditingRow(row)}><EditIcon /></IconButton></Tooltip>
+            <IconButton onClick={() => handleOpenEditModal(row.original)}><EditIcon /></IconButton>
           </Stack>
         )}
-        renderDetailPanel={({ row }) => {
-          const clientVehicles = allCars.filter(car => car.owner_id == row.original.id);
-          return (
-            <Box sx={{ p: 2, backgroundColor: '#fcfcfc' }}>
-              <Grid container spacing={4}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" sx={{fontWeight:'bold'}}><CarIcon fontSize="small" /> Vehicles</Typography>
-                  <List sx={{ bgcolor: 'background.paper', border: '1px solid #eee' }}>{clientVehicles.map((car) => (<ListItem key={car.id}><ListItemText primary={`${car.make} ${car.model}`} secondary={`Plate: ${car.license_plate?.split('\r')[0]}`} /></ListItem>))}</List>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" sx={{fontWeight:'bold'}}><PermitIcon fontSize="small" /> Billing</Typography>
-                  <Paper variant="outlined" sx={{p:2}}>Fee: ${row.original.feeCharged || '0'}.00<br/>Permits: {row.original.permitNumber || 'None'}</Paper>
-                </Grid>
-              </Grid>
-            </Box>
-          );
-        }}
+        displayColumnDefOptions={{ 'mrt-row-actions': { header: 'Actions' } }}
+        enableRowActions
       />
+
+      {/* --- SEPARATE CUSTOM MODAL --- */}
+      <Dialog open={modalOpen} onClose={handleCloseModal} fullWidth maxWidth="sm">
+        <DialogTitle sx={{fontWeight:'bold', borderBottom: '1px solid #eee', mb: 2}}>
+            {isEditMode ? "Edit Client" : "Add New Client"}
+        </DialogTitle>
+        <DialogContent>
+            <Grid container spacing={2} sx={{mt: 1}}>
+                <Grid item xs={6}>
+                    <TextField fullWidth label="First Name" value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} />
+                </Grid>
+                <Grid item xs={6}>
+                    <TextField fullWidth label="Last Name" value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} />
+                </Grid>
+                <Grid item xs={6}>
+                    <TextField select fullWidth label="Type" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
+                        <MenuItem value="tenant">Tenant</MenuItem>
+                        <MenuItem value="employee">Employee</MenuItem>
+                        <MenuItem value="payer">Payer</MenuItem>
+                    </TextField>
+                </Grid>
+                <Grid item xs={6}>
+                    <TextField select fullWidth label="Status" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
+                        <MenuItem value="active">Active</MenuItem>
+                        <MenuItem value="inactive">Inactive</MenuItem>
+                    </TextField>
+                </Grid>
+                <Grid item xs={6}>
+                    <TextField fullWidth label="Permit #" value={formData.permitNumber} onChange={(e) => setFormData({...formData, permitNumber: e.target.value})} />
+                </Grid>
+                <Grid item xs={6}>
+                    <TextField fullWidth label="Cost" type="number" value={formData.feeCharged} onChange={(e) => setFormData({...formData, feeCharged: e.target.value})} />
+                </Grid>
+            </Grid>
+        </DialogContent>
+        <DialogActions sx={{p: 3}}>
+            <Button onClick={handleCloseModal}>Cancel</Button>
+            <Button variant="contained" onClick={handleFormSubmit}>{isEditMode ? "Save Changes" : "Create Client"}</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
