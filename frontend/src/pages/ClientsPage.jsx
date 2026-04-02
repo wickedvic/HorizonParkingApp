@@ -154,15 +154,26 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const handleMassPayment = async () => {
     const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
     if (!window.confirm(`Process mass payments for ${currentMonth}? This will only charge active users who haven't paid yet.`)) return;
+    
     try {
-      const activeClients = clients.filter(c => normalize(c.status) === 'active');
+      // Ensure we explicitly filter out anyone with an invalid or zero fee
+      const activeClients = clients.filter(c => {
+        const fee = parseFloat(c.feeCharged);
+        return normalize(c.status) === 'active' && !isNaN(fee) && fee > 0;
+      });
+
+      if (activeClients.length === 0) {
+        alert("No active clients with a valid fee greater than $0 were found.");
+        return;
+      }
+
       const res = await fetch(`${API_BASE_URL}/process-mass-payment`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ month: currentMonth, clients: activeClients, addedBy: user?.id || 1 }),
       });
       const data = await res.json();
       if (res.ok) { 
-        alert(`Process Complete!\nPayments Created: ${data.processed}\nAlready Paid: ${data.skipped}`); 
+        alert(`Process Complete!\nPayments Created: ${data.processed}\nAlready Paid / Skipped: ${data.skipped}`); 
         loadPayments(); 
       } else {
         alert(`Server Error: ${data.error}`);

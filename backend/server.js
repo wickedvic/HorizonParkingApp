@@ -51,7 +51,6 @@ app.get("/clients", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ADD CLIENT ROUTE
 app.post("/clients", async (req, res) => {
   const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp, addedBy } = req.body;
   try {
@@ -76,7 +75,6 @@ app.post("/clients", async (req, res) => {
   }
 });
 
-// UPDATE CLIENT ROUTE
 app.put("/clients/:id", async (req, res) => {
   const { id } = req.params;
   const { firstName, lastName, address, city, state, zip, phone, permitNumber, feeCharged, email, company, status, type, ccNum, ccExp } = req.body;
@@ -105,7 +103,6 @@ app.post("/cars", async (req, res) => {
   try {
     const shortAddedBy = (addedBy || 'ADM').substring(0, 3).toUpperCase();
 
-    // FIX: Calculate the next Vehicle ID manually, matching the Clients logic
     const [maxIdRow] = await pool.query("SELECT MAX(`Car ID#`) as maxId FROM Cars");
     const newId = (maxIdRow[0].maxId || 0) + 1;
 
@@ -193,15 +190,23 @@ app.post("/process-mass-payment", async (req, res) => {
     let skippedCount = 0;
 
     for (const client of clients) {
+      // FIX: Ensure we use the exact specific client fee, ignoring empty, invalid, or zero amounts
+      const fee = parseFloat(client.feeCharged);
+      
+      if (isNaN(fee) || fee <= 0) {
+        continue;
+      }
+
       const [existing] = await connection.query(
         "SELECT ID FROM Payments WHERE Payer = ? AND `Payment Month` = ?",
         [client.id, month]
       );
 
       if (existing.length === 0) {
+        // Insert the actual parsed exact fee, instead of hardcoded 120
         await connection.query(
           "INSERT INTO Payments (Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy) VALUES (?, ?, ?, NOW(), ?)", 
-          [client.id, month, client.feeCharged || "120", addedBy]
+          [client.id, month, fee, addedBy]
         );
         processedCount++;
       } else {
