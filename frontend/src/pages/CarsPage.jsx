@@ -57,6 +57,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   const handleOpenEditModal = (car) => {
     setIsEditMode(true);
+    // Ensure we are passing the record's actual database ID
     setFormData({ ...car });
     setModalOpen(true);
   };
@@ -64,7 +65,9 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   const handleCloseModal = () => setModalOpen(false);
 
   const handleFormSubmit = async () => {
-    const url = isEditMode ? `${API_BASE_URL}/cars/${formData.id}` : `${API_BASE_URL}/cars`;
+    // FIX: Ensure formData.id is a valid number before calling the URL
+    const carId = formData.id;
+    const url = isEditMode ? `${API_BASE_URL}/cars/${carId}` : `${API_BASE_URL}/cars`;
     const method = isEditMode ? "PUT" : "POST";
     
     const payload = {
@@ -131,11 +134,25 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       id: "owner_name",
       Cell: ({ row, renderedCellValue }) => {
         const nameStr = renderedCellValue?.toString() || "";
+        const ownerId = row.original.owner_id;
+        
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <PersonIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-            <Link component="button" variant="body2" sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }} onClick={() => onNavigateClient(row.original.owner_last || "")}>
-              {nameStr !== "" ? nameStr : `ID: ${row.original.owner_id}`}
+            <Link 
+              component="button" 
+              variant="body2" 
+              sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }} 
+              onClick={() => {
+                // FIX: Navigate using the ID to ensure exact filtering on the client page
+                if (ownerId) {
+                  onNavigateClient({ id: ownerId });
+                } else {
+                  onNavigateClient(row.original.owner_last || "");
+                }
+              }}
+            >
+              {nameStr !== "" ? nameStr : `ID: ${ownerId}`}
             </Link>
           </Box>
         );
@@ -175,7 +192,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         )}
       />
 
-      {/* --- SEPARATE CUSTOM MODAL FOR VEHICLES --- */}
       <Dialog open={modalOpen} onClose={handleCloseModal} fullWidth maxWidth="sm">
         <DialogTitle sx={{fontWeight:'bold', borderBottom: '1px solid #eee', mb: 2}}>
             {isEditMode ? "Edit Vehicle" : "Add New Vehicle"}
