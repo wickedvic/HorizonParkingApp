@@ -59,7 +59,7 @@ export default function PermitsPage({ user, initialFilter }) {
     } catch (err) { console.error(err); }
   }
 
-  // FIX: Force raw date parsing to avoid UTC to EDT timezone shifting
+  // Force raw date parsing to avoid UTC to EDT timezone shifting
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     try {
@@ -147,13 +147,18 @@ export default function PermitsPage({ user, initialFilter }) {
     } catch (err) { console.error(err) }
   }
 
-  // FIX: Apply the timezone safe parsing logic to the data filter
+  // FIX: Properly handle date overlap rather than just checking the start date
   const filteredPermits = useMemo(() => {
     return permits.filter(p => {
-      if (!p.PermitStartDate) return false;
+      if (!p.PermitStartDate || !p.PermitEndDate) return false;
+      
       try {
-        const pDate = typeof p.PermitStartDate === 'string' ? p.PermitStartDate.split("T")[0] : new Date(p.PermitStartDate).toISOString().split("T")[0];
-        return pDate >= dateRange.start && pDate <= dateRange.end;
+        const startDate = typeof p.PermitStartDate === 'string' ? p.PermitStartDate.split("T")[0] : new Date(p.PermitStartDate).toISOString().split("T")[0];
+        const endDate = typeof p.PermitEndDate === 'string' ? p.PermitEndDate.split("T")[0] : new Date(p.PermitEndDate).toISOString().split("T")[0];
+        
+        // A permit is valid in the filter window if its start date is before or equal to the filter end date, 
+        // AND its end date is after or equal to the filter start date. This checks for overlap.
+        return startDate <= dateRange.end && endDate >= dateRange.start;
       } catch(e) {
         return false;
       }
