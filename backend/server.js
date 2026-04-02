@@ -162,18 +162,48 @@ app.delete("/permits/:id", async (req, res) => {
 app.post("/process-mass-payment", async (req, res) => {
   const { month, clients, addedBy } = req.body;
   const connection = await pool.getConnection();
+  const shortAddedBy = (addedBy || 'ADM').substring(0, 3).toUpperCase();
+
   try {
     await connection.beginTransaction();
-    await connection.query("INSERT INTO MassPaymentsLog (MonthProcessed, DateProcessed, AddedBy) VALUES (?, NOW(), ?)", [month, addedBy || 'Admin']);
+
+    // 1. Log the mass payment attempt
+    await connection.query(
+      "INSERT INTO MassPaymentsLog (MonthProcessed, DateProcessed, AddedBy) VALUES (?, NOW(), ?)", 
+      [month, shortAddedBy]
+    );
+
+    let processedCount = 0;
+    let skippedCount = 0;
+
     for (const client of clients) {
-      await connection.query("INSERT INTO Payments (Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy) VALUES (?, ?, ?, NOW(), ?)", [client.id, month, client.feeCharged || "120", addedBy || 'Admin']);
+      // 2. CHECK FOR DUPLICATE: See if this client already has a payment for this month
+      const [existing] = await connection.query(
+        "SELECT ID FROM Payments WHERE Payer = ? AND `Payment Month` = ?",
+        [client.id, month]
+      );
+
+      if (existing.length === 0) {
+        // 3. Insert payment only if it doesn't exist
+        await connection.query(
+          "INSERT INTO Payments (Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy) VALUES (?, ?, ?, NOW(), ?)", 
+          [client.id, month, client.feeCharged || "120", shortAddedBy]
+        );
+        processedCount++;
+      } else {
+        skippedCount++;
+      }
     }
+
     await connection.commit();
-    res.json({ success: true });
+    res.json({ success: true, processed: processedCount, skipped: skippedCount });
   } catch (err) {
     await connection.rollback();
+    console.error("MASS PAYMENT ERROR:", err.message);
     res.status(500).json({ error: err.message });
-  } finally { connection.release(); }
+  } finally {
+    connection.release();
+  }
 });
 
 app.get("/payments", async (req, res) => {
