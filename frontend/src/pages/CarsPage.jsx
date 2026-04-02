@@ -4,7 +4,8 @@ import React, { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
 import { 
   Box, Tooltip, IconButton, Typography, Link, Button, 
-  Stack, ToggleButton, ToggleButtonGroup 
+  Stack, ToggleButton, ToggleButtonGroup, Dialog, DialogTitle, 
+  DialogContent, DialogActions, TextField, MenuItem, Grid 
 } from "@mui/material";
 import { 
   Delete as DeleteIcon, Person as PersonIcon, Add as AddIcon, 
@@ -20,6 +21,13 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   const [clients, setClients] = useState([]); 
   const [statusFilter, setStatusFilter] = useState("active");
   const [globalFilter, setGlobalFilter] = useState(initialFilter || "");
+
+  // MODAL STATES
+  const [modalOpen, setModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [formData, setFormData] = useState({ 
+    id: null, license_plate: '', make: '', model: '', year: '', color: '', owner_id: '' 
+  });
 
   useEffect(() => { loadCars(); loadClients(); }, []);
   useEffect(() => { setGlobalFilter(initialFilter || ""); }, [initialFilter]);
@@ -40,69 +48,44 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
     } catch (err) { console.error("Failed to load clients:", err); }
   };
 
-  const handleExportByStatus = (status) => {
-    const filteredData = cars.filter(car => {
-      const owner = clients.find(c => c.id == car.owner_id);
-      return (owner?.status?.toLowerCase() || "inactive") === status.toLowerCase();
-    });
-    const config = mkConfig({ ...csvConfigBase, filename: `${status}-vehicles-export` });
-    const csv = generateCsv(config)(filteredData);
-    download(config)(csv);
+  // --- MODAL HANDLERS ---
+  const handleOpenAddModal = () => {
+    setIsEditMode(false);
+    setFormData({ id: null, license_plate: '', make: '', model: '', year: '', color: '', owner_id: '' });
+    setModalOpen(true);
   };
 
-  const handleCreateCar = async ({ values, table }) => {
+  const handleOpenEditModal = (car) => {
+    setIsEditMode(true);
+    setFormData({ ...car });
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = () => setModalOpen(false);
+
+  const handleFormSubmit = async () => {
+    const url = isEditMode ? `${API_BASE_URL}/cars/${formData.id}` : `${API_BASE_URL}/cars`;
+    const method = isEditMode ? "PUT" : "POST";
+    
+    const payload = {
+        ...formData,
+        addedBy: (user?.username || 'ADM').substring(0, 3).toUpperCase()
+    };
+
     try {
-      const shortAddedBy = (user?.username || 'ADM').substring(0, 3).toUpperCase();
-
-      // FIX: Explicitly map fields to ensure keys match backend expectations
-      const payload = {
-        make: values.make || "",
-        model: values.model || "",
-        color: values.color || "",
-        year: values.year || "",
-        license_plate: values.license_plate || "",
-        owner_id: values.owner_id || null, // Ensure owner_id is sent explicitly
-        addedBy: shortAddedBy
-      };
-
-      const res = await fetch(`${API_BASE_URL}/cars`, {
-        method: "POST",
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
       if (res.ok) {
         await loadCars();
-        table.setCreatingRow(null);
+        handleCloseModal();
       } else {
-        const errorData = await res.json();
-        alert(`Error: ${errorData.error}`);
+        const errData = await res.json();
+        alert(`Error: ${errData.error || 'Failed to save vehicle'}`);
       }
-    } catch (err) { console.error("Error creating car:", err); }
-  };
-
-  const handleSaveCar = async ({ values, row, table }) => {
-    try {
-      // FIX: Explicitly map payload to prevent nulling the owner_id
-      const payload = {
-        make: values.make,
-        model: values.model,
-        color: values.color,
-        year: values.year,
-        license_plate: values.license_plate,
-        owner_id: values.owner_id || null // Extract specifically from values
-      };
-
-      const res = await fetch(`${API_BASE_URL}/cars/${row.original.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        await loadCars();
-        table.setEditingRow(null);
-      }
-    } catch (err) { console.error("Error updating car:", err); }
+    } catch (err) { console.error("Form Submit Error:", err); }
   };
 
   const handleDeleteCar = async (id, plate) => {
@@ -114,6 +97,16 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
     }
   };
 
+  const handleExportByStatus = (status) => {
+    const filteredData = cars.filter(car => {
+      const owner = clients.find(c => c.id == car.owner_id);
+      return (owner?.status?.toLowerCase() || "inactive") === status.toLowerCase();
+    });
+    const config = mkConfig({ ...csvConfigBase, filename: `${status}-vehicles-export` });
+    const csv = generateCsv(config)(filteredData);
+    download(config)(csv);
+  };
+
   const displayedCars = useMemo(() => {
     return cars.filter(car => {
       const owner = clients.find(c => c.id == car.owner_id);
@@ -122,41 +115,33 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   }, [cars, clients, statusFilter]);
 
   const columns = useMemo(() => [
-    { accessorKey: "id", header: "ID", enableEditing: false, size: 80 },
+    { accessorKey: "id", header: "ID", size: 80 },
     { 
-      accessorKey: "license_plate", header: "Plate", muiEditTextFieldProps: { required: true },
+      accessorKey: "license_plate", header: "Plate",
       Cell: ({ cell }) => <Typography sx={{ fontWeight: 'bold', fontFamily: 'monospace' }}>{cell.getValue()?.toString().split('\r')[0]}</Typography>
     },
-    { accessorKey: "make", header: "Make", muiEditTextFieldProps: { required: true } },
+    { accessorKey: "make", header: "Make" },
     { accessorKey: "model", header: "Model" },
     { accessorKey: "year", header: "Year" },
     { accessorKey: "color", header: "Color" },
     {
       accessorKey: "owner_id",
       header: "Owner",
-      editVariant: 'select',
-      editSelectOptions: clients.map(c => ({ label: `${c.lastName}, ${c.firstName} (ID: ${c.id})`, value: c.id })),
-      muiEditTextFieldProps: {
-        select: true,
-      },
       accessorFn: (row) => `${row.owner_first || ''} ${row.owner_last || ''}`.trim(),
-      id: "owner_id", // Changed ID to match the accessorKey for better internal state mapping
-      Cell: ({ row }) => {
-        const firstName = row.original.owner_first || "";
-        const lastName = row.original.owner_last || "";
-        const fullName = `${firstName} ${lastName}`.trim();
-        
+      id: "owner_name",
+      Cell: ({ row, renderedCellValue }) => {
+        const nameStr = renderedCellValue?.toString() || "";
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <PersonIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-            <Link component="button" variant="body2" sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }} onClick={() => onNavigateClient(lastName || "")}>
-              {fullName !== "" ? fullName : `ID: ${row.original.owner_id}`}
+            <Link component="button" variant="body2" sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }} onClick={() => onNavigateClient(row.original.owner_last || "")}>
+              {nameStr !== "" ? nameStr : `ID: ${row.original.owner_id}`}
             </Link>
           </Box>
         );
       },
     },
-  ], [onNavigateClient, clients]);
+  ], [onNavigateClient]);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -167,25 +152,68 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
           <ToggleButton value="inactive">Inactive Owners</ToggleButton>
         </ToggleButtonGroup>
       </Stack>
+
       <MaterialReactTable 
-        columns={columns} data={displayedCars} editDisplayMode="modal" enableEditing
-        onEditingRowSave={handleSaveCar} onCreatingRowSave={handleCreateCar}
-        state={{ globalFilter }} onGlobalFilterChange={setGlobalFilter}
-        renderTopToolbarCustomActions={({ table }) => (
+        columns={columns} 
+        data={displayedCars} 
+        state={{ globalFilter }} 
+        onGlobalFilterChange={setGlobalFilter}
+        enableRowActions
+        renderTopToolbarCustomActions={() => (
           <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => table.setCreatingRow(true)}>Add New Vehicle</Button>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddModal}>Add New Vehicle</Button>
             <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
             <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
             <Button startIcon={<FileDownloadIcon />} onClick={() => download(mkConfig({ ...csvConfigBase, filename: 'all-vehicles' }))(generateCsv(mkConfig({ ...csvConfigBase }))(cars))} variant="outlined" size="small">Export All</Button>
           </Box>
         )}
-        renderRowActions={({ row, table }) => (
+        renderRowActions={({ row }) => (
           <Box sx={{ display: 'flex', gap: '0.5rem' }}>
-            <Tooltip title="Edit"><IconButton onClick={() => table.setEditingRow(row)}><EditIcon /></IconButton></Tooltip>
+            <Tooltip title="Edit"><IconButton onClick={() => handleOpenEditModal(row.original)}><EditIcon /></IconButton></Tooltip>
             {user?.role === "admin" && <Tooltip title="Delete"><IconButton color="error" onClick={() => handleDeleteCar(row.original.id, row.original.license_plate)}><DeleteIcon /></IconButton></Tooltip>}
           </Box>
         )}
       />
+
+      {/* --- SEPARATE CUSTOM MODAL FOR VEHICLES --- */}
+      <Dialog open={modalOpen} onClose={handleCloseModal} fullWidth maxWidth="sm">
+        <DialogTitle sx={{fontWeight:'bold', borderBottom: '1px solid #eee', mb: 2}}>
+            {isEditMode ? "Edit Vehicle" : "Add New Vehicle"}
+        </DialogTitle>
+        <DialogContent>
+            <Grid container spacing={2} sx={{mt: 1}}>
+                <Grid item xs={12}>
+                    <TextField fullWidth label="License Plate" value={formData.license_plate} onChange={(e) => setFormData({...formData, license_plate: e.target.value})} />
+                </Grid>
+                <Grid item xs={6}>
+                    <TextField fullWidth label="Make" value={formData.make} onChange={(e) => setFormData({...formData, make: e.target.value})} />
+                </Grid>
+                <Grid item xs={6}>
+                    <TextField fullWidth label="Model" value={formData.model} onChange={(e) => setFormData({...formData, model: e.target.value})} />
+                </Grid>
+                <Grid item xs={6}>
+                    <TextField fullWidth label="Year" value={formData.year} onChange={(e) => setFormData({...formData, year: e.target.value})} />
+                </Grid>
+                <Grid item xs={6}>
+                    <TextField fullWidth label="Color" value={formData.color} onChange={(e) => setFormData({...formData, color: e.target.value})} />
+                </Grid>
+                <Grid item xs={12}>
+                    <TextField select fullWidth label="Owner" value={formData.owner_id || ''} onChange={(e) => setFormData({...formData, owner_id: e.target.value})}>
+                        <MenuItem value=""><em>None</em></MenuItem>
+                        {clients.map((c) => (
+                            <MenuItem key={c.id} value={c.id}>
+                                {c.lastName}, {c.firstName} (ID: {c.id})
+                            </MenuItem>
+                        ))}
+                    </TextField>
+                </Grid>
+            </Grid>
+        </DialogContent>
+        <DialogActions sx={{p: 3}}>
+            <Button onClick={handleCloseModal}>Cancel</Button>
+            <Button variant="contained" onClick={handleFormSubmit}>{isEditMode ? "Save Changes" : "Create Vehicle"}</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
