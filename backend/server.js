@@ -79,7 +79,7 @@ app.get("/cars", async (req, res) => {
 app.post("/cars", async (req, res) => {
   const { make, model, color, year, license_plate, owner_id, addedBy } = req.body;
   try {
-    // FIX: Truncate addedBy to 3 characters in backend as a fallback
+    // Truncate to match DB constraints
     const shortAddedBy = (addedBy || 'ADM').substring(0, 3).toUpperCase();
 
     const [result] = await pool.query(

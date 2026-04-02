@@ -52,16 +52,16 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   const handleCreateCar = async ({ values, table }) => {
     try {
-      // FIX: Truncate addedBy to 3 characters to prevent DB "Data too long" error
       const shortAddedBy = (user?.username || 'ADM').substring(0, 3).toUpperCase();
 
+      // FIX: Explicitly map fields to ensure keys match backend expectations
       const payload = {
         make: values.make || "",
         model: values.model || "",
         color: values.color || "",
         year: values.year || "",
         license_plate: values.license_plate || "",
-        owner_id: values.owner_id || null,
+        owner_id: values.owner_id || null, // Ensure owner_id is sent explicitly
         addedBy: shortAddedBy
       };
 
@@ -83,13 +83,14 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   const handleSaveCar = async ({ values, row, table }) => {
     try {
+      // FIX: Explicitly map payload to prevent nulling the owner_id
       const payload = {
         make: values.make,
         model: values.model,
         color: values.color,
         year: values.year,
         license_plate: values.license_plate,
-        owner_id: values.owner_id
+        owner_id: values.owner_id || null // Extract specifically from values
       };
 
       const res = await fetch(`${API_BASE_URL}/cars/${row.original.id}`, {
@@ -139,7 +140,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         select: true,
       },
       accessorFn: (row) => `${row.owner_first || ''} ${row.owner_last || ''}`.trim(),
-      id: "owner_name",
+      id: "owner_id", // Changed ID to match the accessorKey for better internal state mapping
       Cell: ({ row }) => {
         const firstName = row.original.owner_first || "";
         const lastName = row.original.owner_last || "";
