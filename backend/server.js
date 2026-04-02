@@ -160,34 +160,34 @@ app.delete("/permits/:id", async (req, res) => {
 
 // --- PAYMENTS ---
 app.post("/process-mass-payment", async (req, res) => {
-  const { month, clients, addedBy } = req.body;
+  const { month, clients, addedBy } = req.body; // addedBy is now an integer ID
   const connection = await pool.getConnection();
-  const shortAddedBy = (addedBy || 'ADM').substring(0, 3).toUpperCase();
 
   try {
     await connection.beginTransaction();
 
     // 1. Log the mass payment attempt
+    // AddedBy here is an integer ID to match column type
     await connection.query(
       "INSERT INTO MassPaymentsLog (MonthProcessed, DateProcessed, AddedBy) VALUES (?, NOW(), ?)", 
-      [month, shortAddedBy]
+      [month, addedBy]
     );
 
     let processedCount = 0;
     let skippedCount = 0;
 
     for (const client of clients) {
-      // 2. CHECK FOR DUPLICATE: See if this client already has a payment for this month
+      // 2. CHECK FOR DUPLICATE
       const [existing] = await connection.query(
         "SELECT ID FROM Payments WHERE Payer = ? AND `Payment Month` = ?",
         [client.id, month]
       );
 
       if (existing.length === 0) {
-        // 3. Insert payment only if it doesn't exist
+        // 3. Insert payment
         await connection.query(
           "INSERT INTO Payments (Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy) VALUES (?, ?, ?, NOW(), ?)", 
-          [client.id, month, client.feeCharged || "120", shortAddedBy]
+          [client.id, month, client.feeCharged || "120", addedBy]
         );
         processedCount++;
       } else {

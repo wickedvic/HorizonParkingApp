@@ -29,7 +29,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const [payments, setPayments] = useState([]);
   const [statusFilter, setStatusFilter] = useState("active");
   
-  // MODAL STATES
   const [modalOpen, setModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({ firstName: '', lastName: '', type: 'tenant', status: 'active', permitNumber: '', feeCharged: '120', id: null });
@@ -67,7 +66,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     } catch (err) { console.error(err); }
   }
 
-  // --- CSV EXPORTS ---
   const handleExportByStatus = (status) => {
     const filteredData = clients.filter(c => normalize(c.status) === normalize(status));
     const config = mkConfig({ ...csvConfigBase, filename: `${status}-clients-export` });
@@ -81,7 +79,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     download(config)(csv);
   };
 
-  // --- PDF GENERATIONS ---
   const handlePrintPermit = (client) => {
     const clientVehicles = allCars.filter(car => car.owner_id == client.id);
     const monthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -119,7 +116,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     printWindow.document.close();
   };
 
-  // --- MASS PAYMENT ---
   const handleMassPayment = async () => {
     const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
     if (!window.confirm(`Process mass payments for ${currentMonth}? This will only charge active users who haven't paid yet.`)) return;
@@ -127,7 +123,8 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       const activeClients = clients.filter(c => normalize(c.status) === 'active');
       const res = await fetch(`${API_BASE_URL}/process-mass-payment`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ month: currentMonth, clients: activeClients, addedBy: (user?.username || 'ADM').substring(0, 3) }),
+        // Send user.id as an integer to avoid SQL "Incorrect integer value" error
+        body: JSON.stringify({ month: currentMonth, clients: activeClients, addedBy: user?.id || 1 }),
       });
       const data = await res.json();
       if (res.ok) { 
@@ -139,7 +136,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     } catch (err) { console.error(err); }
   };
 
-  // --- MODAL HANDLERS ---
   const handleOpenAddModal = () => {
     setIsEditMode(false);
     setFormData({ firstName: '', lastName: '', type: 'tenant', status: 'active', permitNumber: '', feeCharged: '120', id: null });
@@ -162,7 +158,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         ...formData,
         address: "", city: "", state: "", zip: "", phone: "", email: "", company: "",
         ccNum: "", ccExp: "",
-        addedBy: (user?.username || 'ADM').substring(0, 3).toUpperCase()
+        addedBy: user?.id || 1 
     };
 
     try {
