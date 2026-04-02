@@ -162,7 +162,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
               component="button" 
               variant="body2" 
               sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }} 
-              onClick={() => onNavigateClient(row.original.owner_last || "")}
+              // onClick={() => onNavigateClient(row.original.owner_last || "")}
             >
               {nameStr !== "" ? nameStr : `ID: ${row.original.owner_id}`}
             </Link>

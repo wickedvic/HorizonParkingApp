@@ -91,7 +91,14 @@ app.put("/clients/:id", async (req, res) => {
 app.get("/cars", async (req, res) => {
   try {
     const [rows] = await pool.query(`SELECT c.*, p.First as ownerFirst, p.Last as ownerLast FROM Cars c LEFT JOIN People p ON c.Owner = p.PeopleID`);
-    const formattedCars = rows.map(car => ({
+    
+    // FIX: Filter out any vehicles that have a null or undefined ID before sending to frontend
+    const cleanedRows = rows.filter(car => {
+      if (!car['Car ID#']) return false;
+      return true;
+    });
+
+    const formattedCars = cleanedRows.map(car => ({
       id: car['Car ID#'], make: car['Car Make'], model: car.Model, color: car.Color, year: car.Year, license_plate: car.License, owner_id: car.Owner, owner_first: car.ownerFirst, owner_last: car.ownerLast
     }));
     res.json(formattedCars);
@@ -190,7 +197,6 @@ app.post("/process-mass-payment", async (req, res) => {
     let skippedCount = 0;
 
     for (const client of clients) {
-      // FIX: Ensure we use the exact specific client fee, ignoring empty, invalid, or zero amounts
       const fee = parseFloat(client.feeCharged);
       
       if (isNaN(fee) || fee <= 0) {
@@ -203,7 +209,6 @@ app.post("/process-mass-payment", async (req, res) => {
       );
 
       if (existing.length === 0) {
-        // Insert the actual parsed exact fee, instead of hardcoded 120
         await connection.query(
           "INSERT INTO Payments (Payer, `Payment Month`, `Payment Amount`, AddedTS, AddedBy) VALUES (?, ?, ?, NOW(), ?)", 
           [client.id, month, fee, addedBy]
