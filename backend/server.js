@@ -77,12 +77,14 @@ app.get("/cars", async (req, res) => {
 });
 
 app.post("/cars", async (req, res) => {
-  // FIX: Destructure explicitly from req.body
   const { make, model, color, year, license_plate, owner_id, addedBy } = req.body;
   try {
+    // FIX: Truncate addedBy to 3 characters in backend as a fallback
+    const shortAddedBy = (addedBy || 'ADM').substring(0, 3).toUpperCase();
+
     const [result] = await pool.query(
       `INSERT INTO Cars (\`Car Make\`, Model, Color, Year, License, Owner, AddedBy, AddedTS) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`, 
-      [make || "", model || "", color || "", year || "", license_plate || "", owner_id || null, addedBy || 'Admin']
+      [make || "", model || "", color || "", year || "", license_plate || "", owner_id || null, shortAddedBy]
     );
     res.json({ success: true, id: result.insertId });
   } catch (err) { 

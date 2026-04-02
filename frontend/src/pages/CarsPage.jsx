@@ -52,7 +52,9 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   const handleCreateCar = async ({ values, table }) => {
     try {
-      // FIX: Ensure owner_id and license_plate are explicitly extracted from the form values
+      // FIX: Truncate addedBy to 3 characters to prevent DB "Data too long" error
+      const shortAddedBy = (user?.username || 'ADM').substring(0, 3).toUpperCase();
+
       const payload = {
         make: values.make || "",
         model: values.model || "",
@@ -60,7 +62,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         year: values.year || "",
         license_plate: values.license_plate || "",
         owner_id: values.owner_id || null,
-        addedBy: user?.username || 'Admin'
+        addedBy: shortAddedBy
       };
 
       const res = await fetch(`${API_BASE_URL}/cars`, {
