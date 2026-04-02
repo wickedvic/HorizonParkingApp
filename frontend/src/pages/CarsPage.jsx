@@ -57,9 +57,10 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   const handleOpenEditModal = (car) => {
     setIsEditMode(true);
-    // FIX: Ensure the id from the row is mapped correctly to formData.id
+    // FIX: MRT rows sometimes store the ID in different formats. 
+    // We check car.id (our mapped name) to ensure the PUT URL is valid.
     setFormData({
-      id: car.id, // This matches the 'id' key from your loadCars formatting
+      id: car.id || null, 
       license_plate: car.license_plate || '',
       make: car.make || '',
       model: car.model || '',
@@ -73,16 +74,15 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   const handleCloseModal = () => setModalOpen(false);
 
   const handleFormSubmit = async () => {
-    // Check for ID specifically in edit mode
-    if (isEditMode && !formData.id) {
-        alert("Error: Vehicle ID is missing.");
+    // Check for ID specifically in edit mode to prevent the /null URL error
+    if (isEditMode && (formData.id === null || formData.id === undefined)) {
+        alert("Error: Vehicle ID is missing from the form data. Please try reopening the edit window.");
         return;
     }
 
     const url = isEditMode ? `${API_BASE_URL}/cars/${formData.id}` : `${API_BASE_URL}/cars`;
     const method = isEditMode ? "PUT" : "POST";
     
-    // Explicit payload to ensure no nulls are sent to DB
     const payload = {
         make: formData.make || "",
         model: formData.model || "",
@@ -203,6 +203,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         )}
         renderRowActions={({ row }) => (
           <Box sx={{ display: 'flex', gap: '0.5rem' }}>
+            {/* PASS row.original TO ENSURE ALL DATA IS PRESENT */}
             <Tooltip title="Edit"><IconButton onClick={() => handleOpenEditModal(row.original)}><EditIcon /></IconButton></Tooltip>
             {user?.role === "admin" && <Tooltip title="Delete"><IconButton color="error" onClick={() => handleDeleteCar(row.original.id, row.original.license_plate)}><DeleteIcon /></IconButton></Tooltip>}
           </Box>
