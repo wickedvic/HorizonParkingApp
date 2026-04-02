@@ -83,6 +83,19 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         return;
     }
 
+    // 1. Validation Check: Ensure NO fields are empty
+    if (
+        !formData.license_plate?.trim() || 
+        !formData.make?.trim() || 
+        !formData.model?.trim() || 
+        !formData.year?.toString().trim() || 
+        !formData.color?.trim() || 
+        !formData.owner_id
+    ) {
+        alert("Please fill out all vehicle details. No fields can be left empty.");
+        return; // Stop the submission process
+    }
+
     const url = isEditMode ? `${API_BASE_URL}/cars/${formData.id}` : `${API_BASE_URL}/cars`;
     const method = isEditMode ? "PUT" : "POST";
     
@@ -194,11 +207,9 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         data={displayedCars} 
         state={{ globalFilter }} 
         onGlobalFilterChange={setGlobalFilter}
-        // FIX: Dynamically hide the entire actions column if user is not admin
         enableRowActions={user?.role === 'admin'}
         renderTopToolbarCustomActions={() => (
           <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            {/* FIX: Hide the Add button if user is not admin */}
             {user?.role === 'admin' && (
               <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddModal}>Add New Vehicle</Button>
             )}
@@ -222,23 +233,66 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         <DialogContent>
             <Grid container spacing={2} sx={{mt: 1}}>
                 <Grid item xs={12}>
-                    <TextField fullWidth label="License Plate" value={formData.license_plate} onChange={(e) => setFormData({...formData, license_plate: e.target.value})} />
+                    <TextField 
+                      fullWidth 
+                      required
+                      label="License Plate" 
+                      value={formData.license_plate} 
+                      error={formData.license_plate === ""}
+                      onChange={(e) => setFormData({...formData, license_plate: e.target.value})} 
+                    />
                 </Grid>
                 <Grid item xs={6}>
-                    <TextField fullWidth label="Make" value={formData.make} onChange={(e) => setFormData({...formData, make: e.target.value})} />
+                    <TextField 
+                      fullWidth 
+                      required
+                      label="Make" 
+                      value={formData.make} 
+                      error={formData.make === ""}
+                      onChange={(e) => setFormData({...formData, make: e.target.value})} 
+                    />
                 </Grid>
                 <Grid item xs={6}>
-                    <TextField fullWidth label="Model" value={formData.model} onChange={(e) => setFormData({...formData, model: e.target.value})} />
+                    <TextField 
+                      fullWidth 
+                      required
+                      label="Model" 
+                      value={formData.model} 
+                      error={formData.model === ""}
+                      onChange={(e) => setFormData({...formData, model: e.target.value})} 
+                    />
                 </Grid>
                 <Grid item xs={6}>
-                    <TextField fullWidth label="Year" value={formData.year} onChange={(e) => setFormData({...formData, year: e.target.value})} />
+                    <TextField 
+                      fullWidth 
+                      required
+                      label="Year" 
+                      value={formData.year} 
+                      error={formData.year === ""}
+                      onChange={(e) => setFormData({...formData, year: e.target.value})} 
+                    />
                 </Grid>
                 <Grid item xs={6}>
-                    <TextField fullWidth label="Color" value={formData.color} onChange={(e) => setFormData({...formData, color: e.target.value})} />
+                    <TextField 
+                      fullWidth 
+                      required
+                      label="Color" 
+                      value={formData.color} 
+                      error={formData.color === ""}
+                      onChange={(e) => setFormData({...formData, color: e.target.value})} 
+                    />
                 </Grid>
                 <Grid item xs={12}>
-                    <TextField select fullWidth label="Owner" value={formData.owner_id || ''} onChange={(e) => setFormData({...formData, owner_id: e.target.value})}>
-                        <MenuItem value=""><em>None</em></MenuItem>
+                    <TextField 
+                      select 
+                      fullWidth 
+                      required
+                      label="Owner" 
+                      value={formData.owner_id || ''} 
+                      error={formData.owner_id === ""}
+                      onChange={(e) => setFormData({...formData, owner_id: e.target.value})}
+                    >
+                        <MenuItem value="" disabled><em>Select an Owner</em></MenuItem>
                         {clients.map((c) => (
                             <MenuItem key={c.id} value={c.id}>
                                 {c.lastName}, {c.firstName} (ID: {c.id})

@@ -196,6 +196,12 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const handleCloseModal = () => setModalOpen(false);
 
   const handleFormSubmit = async () => {
+    // 1. Validation Check: Ensure required fields are not empty
+    if (!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.type || !formData.status) {
+      alert("Please fill out all required fields. First Name, Last Name, Type, and Status cannot be empty.");
+      return; // Stop the submission process
+    }
+
     const url = isEditMode ? `${API_BASE_URL}/clients/${formData.id}` : `${API_BASE_URL}/clients`;
     const method = isEditMode ? "PUT" : "POST";
     
@@ -300,18 +306,32 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         <DialogContent>
             <Grid container spacing={2} sx={{mt: 1}}>
                 <Grid item xs={6}>
-                    <TextField fullWidth label="First Name" value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} />
+                    <TextField 
+                      fullWidth 
+                      required
+                      label="First Name" 
+                      value={formData.firstName} 
+                      error={formData.firstName === ""}
+                      onChange={(e) => setFormData({...formData, firstName: e.target.value})} 
+                    />
                 </Grid>
                 <Grid item xs={6}>
-                    <TextField fullWidth label="Last Name" value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} />
+                    <TextField 
+                      fullWidth 
+                      required
+                      label="Last Name" 
+                      value={formData.lastName} 
+                      error={formData.lastName === ""}
+                      onChange={(e) => setFormData({...formData, lastName: e.target.value})} 
+                    />
                 </Grid>
                 <Grid item xs={6}>
-                    <TextField select fullWidth label="Type" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
+                    <TextField select fullWidth required label="Type" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
                         <MenuItem value="tenant">Tenant</MenuItem><MenuItem value="employee">Employee</MenuItem><MenuItem value="payer">Payer</MenuItem>
                     </TextField>
                 </Grid>
                 <Grid item xs={6}>
-                    <TextField select fullWidth label="Status" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
+                    <TextField select fullWidth required label="Status" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
                         <MenuItem value="active">Active</MenuItem><MenuItem value="inactive">Inactive</MenuItem>
                     </TextField>
                 </Grid>
