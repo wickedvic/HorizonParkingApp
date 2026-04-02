@@ -26,7 +26,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({ 
-    id: null, license_plate: '', make: '', model: '', year: '', color: '', owner_id: '' 
+    id: '', license_plate: '', make: '', model: '', year: '', color: '', owner_id: '' 
   });
 
   useEffect(() => { loadCars(); loadClients(); }, []);
@@ -51,22 +51,22 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   // --- MODAL HANDLERS ---
   const handleOpenAddModal = () => {
     setIsEditMode(false);
-    // id is null because the database will generate it
-    setFormData({ id: null, license_plate: '', make: '', model: '', year: '', color: '', owner_id: '' });
+    // Reset EVERYTHING for new vehicle. Use empty string instead of null for safer state handling.
+    setFormData({ id: '', license_plate: '', make: '', model: '', year: '', color: '', owner_id: '' });
     setModalOpen(true);
   };
 
-  const handleOpenEditModal = (car) => {
+  const handleOpenEditModal = (carRow) => {
     setIsEditMode(true);
-    // Explicitly map keys from the data object to the form
+    // FIX: Extract data robustly from the row object
     setFormData({
-      id: car.id, 
-      license_plate: car.license_plate || '',
-      make: car.make || '',
-      model: car.model || '',
-      year: car.year || '',
-      color: car.color || '',
-      owner_id: car.owner_id || ''
+      id: carRow.id || '', 
+      license_plate: carRow.license_plate || '',
+      make: carRow.make || '',
+      model: carRow.model || '',
+      year: carRow.year || '',
+      color: carRow.color || '',
+      owner_id: carRow.owner_id || ''
     });
     setModalOpen(true);
   };
@@ -74,22 +74,24 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   const handleCloseModal = () => setModalOpen(false);
 
   const handleFormSubmit = async () => {
-    // FIX: Only require an ID if we are in Edit Mode
-    if (isEditMode && !formData.id) {
-        alert("Error: Cannot update vehicle because ID is missing.");
+    // FIX: Verify ID exists if editing, using a strict check against empty string/undefined
+    if (isEditMode && (!formData.id || formData.id === '')) {
+        alert("Error: Vehicle ID is missing. The system cannot update an unknown record.");
         return;
     }
 
     const url = isEditMode ? `${API_BASE_URL}/cars/${formData.id}` : `${API_BASE_URL}/cars`;
     const method = isEditMode ? "PUT" : "POST";
     
+    // Clean payload before sending
     const payload = {
         license_plate: formData.license_plate,
         make: formData.make,
         model: formData.model,
         year: formData.year,
         color: formData.color,
-        owner_id: formData.owner_id || null,
+        // Convert empty string owner_id back to pure null for SQL
+        owner_id: formData.owner_id === '' ? null : formData.owner_id,
         addedBy: (user?.username || 'ADM').substring(0, 3).toUpperCase()
     };
 
@@ -223,7 +225,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
                     <TextField fullWidth label="Color" value={formData.color} onChange={(e) => setFormData({...formData, color: e.target.value})} />
                 </Grid>
                 <Grid item xs={12}>
-                    <TextField select fullWidth label="Owner" value={formData.owner_id || ''} onChange={(e) => setFormData({...formData, owner_id: e.target.value})}>
+                    <TextField select fullWidth label="Owner" value={formData.owner_id} onChange={(e) => setFormData({...formData, owner_id: e.target.value})}>
                         <MenuItem value=""><em>None</em></MenuItem>
                         {clients.map((c) => (
                             <MenuItem key={c.id} value={c.id}>

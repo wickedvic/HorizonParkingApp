@@ -105,7 +105,6 @@ app.get("/cars", async (req, res) => {
 app.post("/cars", async (req, res) => {
   const { make, model, color, year, license_plate, owner_id, addedBy } = req.body;
   try {
-    // Truncate to match DB constraints
     const shortAddedBy = (addedBy || 'ADM').substring(0, 3).toUpperCase();
 
     const [result] = await pool.query(
@@ -119,9 +118,15 @@ app.post("/cars", async (req, res) => {
   }
 });
 
+// FIX: Added guardrails against null or invalid IDs to prevent SQL DOUBLE errors
 app.put("/cars/:id", async (req, res) => {
   const { id } = req.params;
   const { make, model, color, year, license_plate, owner_id } = req.body;
+  
+  if (!id || id === 'null' || id === 'undefined' || id === '') {
+      return res.status(400).json({ error: "Invalid vehicle ID provided. Cannot update database." });
+  }
+
   try {
     await pool.query(
       `UPDATE Cars SET \`Car Make\` = ?, Model = ?, Color = ?, Year = ?, License = ?, Owner = ? WHERE \`Car ID#\` = ?`,
