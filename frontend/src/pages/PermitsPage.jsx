@@ -147,7 +147,7 @@ export default function PermitsPage({ user, initialFilter }) {
     } catch (err) { console.error(err) }
   }
 
-  // FIX: Properly handle date overlap rather than just checking the start date
+  // Properly handle date overlap rather than just checking the start date
   const filteredPermits = useMemo(() => {
     return permits.filter(p => {
       if (!p.PermitStartDate || !p.PermitEndDate) return false;
@@ -178,14 +178,17 @@ export default function PermitsPage({ user, initialFilter }) {
     <Box sx={{ p: 3 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Daily Parking Permits</Typography>
-        <Button
-          variant="contained"
-          startIcon={showForm ? <CloseIcon /> : <AddIcon />}
-          color={showForm ? "error" : "primary"}
-          onClick={() => setShowForm(!showForm)}
-        >
-          {showForm ? "Cancel" : "Issue Permit"}
-        </Button>
+        {/* FIX: Only render the Issue Permit button if the user is an admin */}
+        {user?.role === 'admin' && (
+          <Button
+            variant="contained"
+            startIcon={showForm ? <CloseIcon /> : <AddIcon />}
+            color={showForm ? "error" : "primary"}
+            onClick={() => setShowForm(!showForm)}
+          >
+            {showForm ? "Cancel" : "Issue Permit"}
+          </Button>
+        )}
       </Stack>
 
       <Collapse in={showForm}>
@@ -225,7 +228,10 @@ export default function PermitsPage({ user, initialFilter }) {
         renderRowActions={({ row }) => (
           <Box sx={{ display: 'flex', gap: '0.5rem' }}>
             <Tooltip title="Print Permit"><IconButton onClick={() => handlePrintPermit(row.original)} color="primary"><PrintIcon /></IconButton></Tooltip>
-            <Tooltip title="Delete"><IconButton onClick={() => handleDeletePermit(row.original.TempPermitID)} color="error"><DeleteIcon /></IconButton></Tooltip>
+            {/* FIX: Ensure standard users also cannot delete permits */}
+            {user?.role === 'admin' && (
+              <Tooltip title="Delete"><IconButton onClick={() => handleDeletePermit(row.original.TempPermitID)} color="error"><DeleteIcon /></IconButton></Tooltip>
+            )}
           </Box>
         )}
         muiTablePaperProps={{ elevation: 2, sx: { borderRadius: '12px' } }}
