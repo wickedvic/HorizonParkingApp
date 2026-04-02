@@ -110,8 +110,43 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     const rightCol = clientPayments.slice(mid);
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
-      <html><head><title>Payment History - ${client.lastName}</title><style>body { font-family: Arial; padding: 30px; }.title-box { border: 1px solid black; width: 200px; margin: 0 auto 20px auto; text-align: center; font-weight: bold; padding: 5px; }.header-info { border: 1px solid black; padding: 10px; display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 20px; }.flex-container { display: flex; gap: 20px; }table { width: 100%; border-collapse: collapse; font-size: 12px; }th, td { border: 1px solid black; padding: 4px; text-align: left; }</style></head>
-      <body><div class="title-box">Payment History</div><div class="header-info"><div><div style="background:#444;color:white;width:30px;text-align:center;margin-bottom:5px;">H</div>${client.lastName}, ${client.firstName}<br/>Client Type: ${client.type || 'Payer'}</div><div style="text-align:right;">Method of Payment: Credit Card<br/>Monthly Fee: $${client.feeCharged || '0'}.00</div></div><div class="flex-container"><div style="flex:1;"><table><thead><tr><th>Month</th><th>Amount</th></tr></thead><tbody>${leftCol.map(p => `<tr><td>${p.month}</td><td>$${p.amount}.00</td></tr>`).join('')}</tbody></table></div><div style="flex:1;"><table><thead><tr><th>Month</th><th>Amount</th></tr></thead><tbody>${rightCol.map(p => `<tr><td>${p.month}</td><td>$${p.amount}.00</td></tr>`).join('')}</tbody></table></div></div><script>window.print();</script></body></html>
+      <html>
+        <head>
+          <title>Payment History - ${client.lastName}</title>
+          <style>
+            @page { size: auto; margin: 5mm; }
+            body { font-family: Arial, sans-serif; padding: 15px; margin: 0; font-size: 11px; }
+            .title-box { border: 1px solid black; width: 180px; margin: 0 auto 15px auto; text-align: center; font-weight: bold; padding: 4px; font-size: 14px; }
+            .header-info { border: 1px solid black; padding: 8px; display: flex; justify-content: space-between; margin-bottom: 15px; }
+            .logo-small { background: #444; color: white; width: 25px; text-align: center; margin-bottom: 4px; font-weight: bold; }
+            .flex-container { display: flex; gap: 15px; align-items: flex-start; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid black; padding: 4px; text-align: left; }
+            th { background-color: #f2f2f2; }
+          </style>
+        </head>
+        <body>
+          <div class="title-box">Payment History</div>
+          <div class="header-info">
+            <div><div class="logo-small">H</div><strong>${client.lastName}, ${client.firstName}</strong><br/>Client Type: ${client.type || 'Payer'}</div>
+            <div style="text-align:right;">Method of Payment: Credit Card<br/>Monthly Fee: $${client.feeCharged || '0'}.00</div>
+          </div>
+          <div class="flex-container">
+            <div style="flex:1;">
+                <table><thead><tr><th>Month</th><th>Amount</th></tr></thead>
+                <tbody>${leftCol.map(p => `<tr><td>${p.month}</td><td>$${p.amount}.00</td></tr>`).join('')}</tbody>
+                </table>
+            </div>
+            <div style="flex:1;">
+                <table><thead><tr><th>Month</th><th>Amount</th></tr></thead>
+                <tbody>${rightCol.map(p => `<tr><td>${p.month}</td><td>$${p.amount}.00</td></tr>`).join('')}</tbody>
+                </table>
+            </div>
+          </div>
+          <div style="font-size: 9px; margin-top: 10px; color: #666;">Printed on: ${new Date().toLocaleString()}</div>
+          <script>window.print();</script>
+        </body>
+      </html>
     `);
     printWindow.document.close();
   };
