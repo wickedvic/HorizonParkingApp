@@ -153,7 +153,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
 
   const handleMassPayment = async () => {
     const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-    if (!window.confirm(`Process mass payments for ${currentMonth}? This will only charge active users who haven't paid yet.`)) return;
+    if (!window.confirm(`Process mass payments for ${currentMonth}? This will only charge active users with a fee greater than $0 who haven't paid yet.`)) return;
     
     try {
       // Ensure we explicitly filter out anyone with an invalid or zero fee
@@ -253,7 +253,10 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         enableRowActions
         renderTopToolbarCustomActions={() => (
           <Box sx={{ display: 'flex', gap: '10px' }}>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddModal}>Add New Client</Button>
+            {/* FIX: Hide Add Client Button if user is not admin */}
+            {user?.role === 'admin' && (
+              <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddModal}>Add New Client</Button>
+            )}
             <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
             <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
             <Button startIcon={<FileDownloadIcon />} onClick={handleExportAll} variant="outlined" size="small">Export All</Button>
@@ -264,7 +267,11 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
             <Tooltip title="Parking Permit"><IconButton onClick={() => handlePrintPermit(row.original)} color="error"><ParkingIcon /></IconButton></Tooltip>
             <Tooltip title="Monthly Receipt"><IconButton onClick={() => handlePrintReceipt(row.original)} color="primary"><PdfIcon /></IconButton></Tooltip>
             <Tooltip title="Payment History"><IconButton onClick={() => handlePrintHistory(row.original)} color="info"><HistoryIcon /></IconButton></Tooltip>
-            <Tooltip title="Edit"><IconButton onClick={() => handleOpenEditModal(row.original)}><EditIcon /></IconButton></Tooltip>
+            
+            {/* FIX: Hide Edit Client Button if user is not admin */}
+            {user?.role === 'admin' && (
+              <Tooltip title="Edit"><IconButton onClick={() => handleOpenEditModal(row.original)}><EditIcon /></IconButton></Tooltip>
+            )}
           </Stack>
         )}
         renderDetailPanel={({ row }) => {

@@ -155,6 +155,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       id: "owner_name",
       Cell: ({ row, renderedCellValue }) => {
         const nameStr = renderedCellValue?.toString() || "";
+        const ownerId = row.original.owner_id;
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <PersonIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
@@ -162,7 +163,13 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
               component="button" 
               variant="body2" 
               sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }} 
-              // onClick={() => onNavigateClient(row.original.owner_last || "")}
+              onClick={() => {
+                if (ownerId) {
+                  onNavigateClient({ id: ownerId });
+                } else {
+                  onNavigateClient(row.original.owner_last || "");
+                }
+              }}
             >
               {nameStr !== "" ? nameStr : `ID: ${row.original.owner_id}`}
             </Link>
@@ -187,10 +194,14 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         data={displayedCars} 
         state={{ globalFilter }} 
         onGlobalFilterChange={setGlobalFilter}
-        enableRowActions
+        // FIX: Dynamically hide the entire actions column if user is not admin
+        enableRowActions={user?.role === 'admin'}
         renderTopToolbarCustomActions={() => (
           <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddModal}>Add New Vehicle</Button>
+            {/* FIX: Hide the Add button if user is not admin */}
+            {user?.role === 'admin' && (
+              <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddModal}>Add New Vehicle</Button>
+            )}
             <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
             <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
             <Button startIcon={<FileDownloadIcon />} onClick={() => download(mkConfig({ ...csvConfigBase, filename: 'all-vehicles' }))(generateCsv(mkConfig({ ...csvConfigBase }))(cars))} variant="outlined" size="small">Export All</Button>
@@ -199,7 +210,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         renderRowActions={({ row }) => (
           <Box sx={{ display: 'flex', gap: '0.5rem' }}>
             <Tooltip title="Edit"><IconButton onClick={() => handleOpenEditModal(row.original)}><EditIcon /></IconButton></Tooltip>
-            {user?.role === "admin" && <Tooltip title="Delete"><IconButton color="error" onClick={() => handleDeleteCar(row.original.id, row.original.license_plate)}><DeleteIcon /></IconButton></Tooltip>}
+            <Tooltip title="Delete"><IconButton color="error" onClick={() => handleDeleteCar(row.original.id, row.original.license_plate)}><DeleteIcon /></IconButton></Tooltip>
           </Box>
         )}
       />
