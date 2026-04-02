@@ -51,13 +51,14 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   // --- MODAL HANDLERS ---
   const handleOpenAddModal = () => {
     setIsEditMode(false);
+    // id is null because the database will generate it
     setFormData({ id: null, license_plate: '', make: '', model: '', year: '', color: '', owner_id: '' });
     setModalOpen(true);
   };
 
   const handleOpenEditModal = (car) => {
     setIsEditMode(true);
-    // FIX: Map fields specifically ensuring 'id' is extracted from the row data
+    // Explicitly map keys from the data object to the form
     setFormData({
       id: car.id, 
       license_plate: car.license_plate || '',
@@ -73,9 +74,9 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   const handleCloseModal = () => setModalOpen(false);
 
   const handleFormSubmit = async () => {
-    // Safety check for ID in edit mode
+    // FIX: Only require an ID if we are in Edit Mode
     if (isEditMode && !formData.id) {
-        alert("Error: Vehicle ID is missing from the form data.");
+        alert("Error: Cannot update vehicle because ID is missing.");
         return;
     }
 
@@ -83,8 +84,11 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
     const method = isEditMode ? "PUT" : "POST";
     
     const payload = {
-        ...formData,
-        // Ensure owner_id is null if not selected to avoid DB errors
+        license_plate: formData.license_plate,
+        make: formData.make,
+        model: formData.model,
+        year: formData.year,
+        color: formData.color,
         owner_id: formData.owner_id || null,
         addedBy: (user?.username || 'ADM').substring(0, 3).toUpperCase()
     };
@@ -148,8 +152,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       id: "owner_name",
       Cell: ({ row, renderedCellValue }) => {
         const nameStr = renderedCellValue?.toString() || "";
-        const ownerId = row.original.owner_id;
-        
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <PersonIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
@@ -157,14 +159,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
               component="button" 
               variant="body2" 
               sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }} 
-              onClick={() => {
-                // Navigate to client page and filter by ID
-                if (ownerId) {
-                  onNavigateClient({ id: ownerId });
-                } else {
-                  onNavigateClient(row.original.owner_last || "");
-                }
-              }}
+              onClick={() => onNavigateClient(row.original.owner_last || "")}
             >
               {nameStr !== "" ? nameStr : `ID: ${row.original.owner_id}`}
             </Link>
