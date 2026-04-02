@@ -57,21 +57,39 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   const handleOpenEditModal = (car) => {
     setIsEditMode(true);
-    // Ensure we are passing the record's actual database ID
-    setFormData({ ...car });
+    // FIX: Ensure the id from the row is mapped correctly to formData.id
+    setFormData({
+      id: car.id, // This matches the 'id' key from your loadCars formatting
+      license_plate: car.license_plate || '',
+      make: car.make || '',
+      model: car.model || '',
+      year: car.year || '',
+      color: car.color || '',
+      owner_id: car.owner_id || ''
+    });
     setModalOpen(true);
   };
 
   const handleCloseModal = () => setModalOpen(false);
 
   const handleFormSubmit = async () => {
-    // FIX: Ensure formData.id is a valid number before calling the URL
-    const carId = formData.id;
-    const url = isEditMode ? `${API_BASE_URL}/cars/${carId}` : `${API_BASE_URL}/cars`;
+    // Check for ID specifically in edit mode
+    if (isEditMode && !formData.id) {
+        alert("Error: Vehicle ID is missing.");
+        return;
+    }
+
+    const url = isEditMode ? `${API_BASE_URL}/cars/${formData.id}` : `${API_BASE_URL}/cars`;
     const method = isEditMode ? "PUT" : "POST";
     
+    // Explicit payload to ensure no nulls are sent to DB
     const payload = {
-        ...formData,
+        make: formData.make || "",
+        model: formData.model || "",
+        color: formData.color || "",
+        year: formData.year || "",
+        license_plate: formData.license_plate || "",
+        owner_id: formData.owner_id || null,
         addedBy: (user?.username || 'ADM').substring(0, 3).toUpperCase()
     };
 
@@ -86,7 +104,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         handleCloseModal();
       } else {
         const errData = await res.json();
-        alert(`Error: ${errData.error || 'Failed to save vehicle'}`);
+        alert(`Server Error: ${errData.error || 'Failed to save vehicle'}`);
       }
     } catch (err) { console.error("Form Submit Error:", err); }
   };
@@ -144,7 +162,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
               variant="body2" 
               sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }} 
               onClick={() => {
-                // FIX: Navigate using the ID to ensure exact filtering on the client page
                 if (ownerId) {
                   onNavigateClient({ id: ownerId });
                 } else {
