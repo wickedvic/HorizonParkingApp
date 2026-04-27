@@ -31,7 +31,8 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   
   const [modalOpen, setModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [formData, setFormData] = useState({ firstName: '', lastName: '', type: 'tenant', status: 'active', permitNumber: '', feeCharged: '120', id: null });
+  // FIX: Default cost is now '0'
+  const [formData, setFormData] = useState({ firstName: '', lastName: '', type: 'tenant', status: 'active', permitNumber: '', feeCharged: '0', id: null });
 
   const [globalFilter, setGlobalFilter] = useState(initialFilter || "");
   const [columnFilters, setColumnFilters] = useState([]);
@@ -187,7 +188,8 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
 
   const handleOpenAddModal = () => {
     setIsEditMode(false);
-    setFormData({ firstName: '', lastName: '', type: 'tenant', status: 'active', permitNumber: '', feeCharged: '120', id: null });
+    // FIX: Default cost is now '0'
+    setFormData({ firstName: '', lastName: '', type: 'tenant', status: 'active', permitNumber: '', feeCharged: '0', id: null });
     setModalOpen(true);
   };
 
@@ -242,7 +244,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   ], []);
 
   const displayedClients = useMemo(() => {
-      // FIX: If a global filter is active, ignore the active/inactive toggle so it doesn't hide search results
       if (globalFilter) return clients; 
       return clients.filter(c => normalize(c.status) === normalize(statusFilter));
   }, [clients, statusFilter, globalFilter]);
@@ -263,7 +264,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       <MaterialReactTable
         columns={columns}
         data={displayedClients}
-        // FIX: Hooked up table state to the global filter
         state={{ globalFilter }}
         onGlobalFilterChange={setGlobalFilter}
         enableRowActions
@@ -334,8 +334,31 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
                     />
                 </Grid>
                 <Grid item xs={6}>
-                    <TextField select fullWidth required label="Type" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
-                        <MenuItem value="tenant">Tenant</MenuItem><MenuItem value="employee">Employee</MenuItem><MenuItem value="payer">Payer</MenuItem>
+                    {/* FIX: Generate custom permit if Type is 'payer' on a new creation */}
+                    <TextField 
+                      select 
+                      fullWidth 
+                      required 
+                      label="Type" 
+                      value={formData.type} 
+                      onChange={(e) => {
+                        const newType = e.target.value;
+                        let generatedPermit = formData.permitNumber;
+
+                        if (!isEditMode) {
+                            if (newType === 'payer') {
+                                generatedPermit = `10001-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+                            } else if (formData.type === 'payer') {
+                                generatedPermit = ''; 
+                            }
+                        }
+
+                        setFormData({...formData, type: newType, permitNumber: generatedPermit});
+                      }}
+                    >
+                        <MenuItem value="tenant">Tenant</MenuItem>
+                        <MenuItem value="employee">Employee</MenuItem>
+                        <MenuItem value="payer">Payer</MenuItem>
                     </TextField>
                 </Grid>
                 <Grid item xs={6}>
