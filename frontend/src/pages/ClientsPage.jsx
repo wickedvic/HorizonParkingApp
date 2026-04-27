@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
+import Swal from 'sweetalert2'; // FIX: Imported SweetAlert2
 import {
   Box, Typography, Chip, List, ListItem, ListItemText, Divider,
   ToggleButton, ToggleButtonGroup, Stack, Grid, Button, Paper, Link, Tooltip,
@@ -12,7 +13,7 @@ import {
   Badge as PermitIcon, 
   Add as AddIcon, 
   Edit as EditIcon, 
-  Delete as DeleteIcon, // FIX: Imported DeleteIcon
+  Delete as DeleteIcon, 
   PictureAsPdf as PdfIcon,
   Payments as CashIcon,
   History as HistoryIcon,
@@ -52,7 +53,14 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       const res = await fetch(`${API_BASE_URL}/clients`);
       const data = await res.json();
       setClients(Array.isArray(data) ? data.filter(row => row.id) : []);
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error(err); 
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "Something went wrong loading clients! Please try again in a few minutes.",
+      });
+    }
   };
 
   const loadAllCars = async () => {
@@ -71,19 +79,42 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     } catch (err) { console.error(err); }
   }
 
-  // FIX: Added delete handler for clients
-  const handleDeleteClient = async (id, name) => {
-    if (window.confirm(`Are you sure you want to delete client: ${name}?`)) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/clients/${id}`, { method: 'DELETE' });
-        if (res.ok) {
-          loadClients();
-        } else {
-          const err = await res.json();
-          alert(`Error deleting client: ${err.error}`);
+  // FIX: Converted delete confirmation to SweetAlert2
+  const handleDeleteClient = (id, name) => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: `Do you want to delete client: ${name}?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel"
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/clients/${id}`, { method: 'DELETE' });
+          if (res.ok) {
+            loadClients();
+            Swal.fire("Deleted!", "The client has been removed.", "success");
+          } else {
+            const err = await res.json();
+            Swal.fire({
+              icon: "error",
+              title: "Oops...",
+              text: `Error deleting client: ${err.error}`,
+            });
+          }
+        } catch (err) { 
+          console.error("Error deleting client:", err); 
+          Swal.fire({
+            icon: "error",
+            title: "Oops...",
+            text: "Something went wrong! Please try again in a few minutes.",
+          });
         }
-      } catch (err) { console.error("Error deleting client:", err); }
-    }
+      } else if (result.isDismissed) {
+        Swal.fire("Cancelled", "Changes were not saved.", "info");
+      }
+    });
   };
 
   const handleExportByStatus = (status) => {
@@ -171,33 +202,63 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     printWindow.document.close();
   };
 
-  const handleMassPayment = async () => {
+  // FIX: Converted mass payment confirmation and alerts to SweetAlert2
+  const handleMassPayment = () => {
     const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-    if (!window.confirm(`Process mass payments for ${currentMonth}? This will only charge active users with a fee greater than $0 who haven't paid yet.`)) return;
     
-    try {
-      const activeClients = clients.filter(c => {
-        const fee = parseFloat(c.feeCharged);
-        return normalize(c.status) === 'active' && !isNaN(fee) && fee > 0;
-      });
+    Swal.fire({
+      title: "Process mass payments?",
+      text: `Process mass payments for ${currentMonth}? This will only charge active users with a fee greater than $0 who haven't paid yet.`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Yes, process payments",
+      cancelButtonText: "Cancel"
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const activeClients = clients.filter(c => {
+            const fee = parseFloat(c.feeCharged);
+            return normalize(c.status) === 'active' && !isNaN(fee) && fee > 0;
+          });
 
-      if (activeClients.length === 0) {
-        alert("No active clients with a valid fee greater than $0 were found.");
-        return;
-      }
+          if (activeClients.length === 0) {
+            Swal.fire({
+              icon: "error",
+              title: "Oops...",
+              text: "No active clients with a valid fee greater than $0 were found.",
+            });
+            return;
+          }
 
-      const res = await fetch(`${API_BASE_URL}/process-mass-payment`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ month: currentMonth, clients: activeClients, addedBy: user?.id || 1 }),
-      });
-      const data = await res.json();
-      if (res.ok) { 
-        alert(`Process Complete!\nPayments Created: ${data.processed}\nAlready Paid / Skipped: ${data.skipped}`); 
-        loadPayments(); 
-      } else {
-        alert(`Server Error: ${data.error}`);
+          const res = await fetch(`${API_BASE_URL}/process-mass-payment`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ month: currentMonth, clients: activeClients, addedBy: user?.id || 1 }),
+          });
+          const data = await res.json();
+          if (res.ok) { 
+            Swal.fire({
+              title: "Process Complete!",
+              html: `Payments Created: <b>${data.processed}</b><br/>Already Paid / Skipped: <b>${data.skipped}</b>`,
+              icon: "success"
+            });
+            loadPayments(); 
+          } else {
+            Swal.fire({
+              icon: "error",
+              title: "Server Error",
+              text: data.error,
+            });
+          }
+        } catch (err) { 
+          console.error(err); 
+          Swal.fire({
+            icon: "error",
+            title: "Oops...",
+            text: "Something went wrong! Please try again in a few minutes.",
+          });
+        }
       }
-    } catch (err) { console.error(err); }
+    });
   };
 
   const handleOpenAddModal = () => {
@@ -214,9 +275,14 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
 
   const handleCloseModal = () => setModalOpen(false);
 
+  // FIX: Converted form validation and submission alerts to SweetAlert2
   const handleFormSubmit = async () => {
     if (!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.type || !formData.status) {
-      alert("Please fill out all required fields. First Name, Last Name, Type, and Status cannot be empty.");
+      Swal.fire({
+        icon: "error",
+        title: "Missing Fields",
+        text: "Please fill out all required fields. First Name, Last Name, Type, and Status cannot be empty.",
+      });
       return; 
     }
 
@@ -239,11 +305,27 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       if (res.ok) {
         await loadClients();
         handleCloseModal();
+        Swal.fire({
+          title: "Success!",
+          text: "Data has been updated!",
+          icon: "success"
+        });
       } else {
         const err = await res.json();
-        alert(`Error: ${err.error}`);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: err.error,
+        });
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error(err); 
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "Something went wrong! Please try again in a few minutes.",
+      });
+    }
   };
 
   const columns = useMemo(() => [
@@ -282,7 +364,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         enableRowActions
         renderTopToolbarCustomActions={() => (
           <Box sx={{ display: 'flex', gap: '10px' }}>
-            {/* FIX: Wrapped Add button and all Export buttons so they only show for admin */}
             {user?.role === 'admin' && (
               <>
                 <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddModal}>Add New Client</Button>
@@ -299,7 +380,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
             <Tooltip title="Monthly Receipt"><IconButton onClick={() => handlePrintReceipt(row.original)} color="primary"><PdfIcon /></IconButton></Tooltip>
             <Tooltip title="Payment History"><IconButton onClick={() => handlePrintHistory(row.original)} color="info"><HistoryIcon /></IconButton></Tooltip>
             
-            {/* FIX: Add delete button inside the admin check */}
             {user?.role === 'admin' && (
               <>
                 <Tooltip title="Edit"><IconButton onClick={() => handleOpenEditModal(row.original)}><EditIcon /></IconButton></Tooltip>
