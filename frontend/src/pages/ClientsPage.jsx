@@ -6,7 +6,8 @@ import Swal from 'sweetalert2';
 import {
   Box, Typography, Chip, List, ListItem, ListItemText, Divider,
   ToggleButton, ToggleButtonGroup, Stack, Grid, Button, Paper, Link, Tooltip,
-  IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem
+  IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem,
+  Autocomplete // FIX: Imported Autocomplete for searchable dropdowns
 } from "@mui/material";
 import { 
   DirectionsCar as CarIcon, 
@@ -25,6 +26,16 @@ import { mkConfig, generateCsv, download } from 'export-to-csv';
 
 const csvConfigBase = { fieldSeparator: ',', decimalSeparator: '.', useKeysAsHeaders: true };
 
+// FIX: Custom SweetAlert instance to sit ABOVE the MUI Dialog (MUI Dialog z-index is 1300)
+const ModalSwal = Swal.mixin({
+  didOpen: () => {
+    const container = Swal.getContainer();
+    if (container) {
+      container.style.zIndex = '1400';
+    }
+  }
+});
+
 export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, initialFilter }) {
   const [clients, setClients] = useState([]);
   const [allCars, setAllCars] = useState([]);
@@ -36,10 +47,10 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const [formData, setFormData] = useState({ firstName: '', lastName: '', type: 'tenant', status: 'active', permitNumber: '', feeCharged: '0', id: null });
 
   // --- NEW MULTI-STEP FLOW STATES ---
-  const [flowMode, setFlowMode] = useState('client-only'); // 'client-only' or 'client-and-car'
-  const [flowStep, setFlowStep] = useState(1); // 1 = Client Form, 2 = Car Form
+  const [flowMode, setFlowMode] = useState('client-only'); 
+  const [flowStep, setFlowStep] = useState(1); 
   const [newlyCreatedClientId, setNewlyCreatedClientId] = useState(null);
-  const [carFlowType, setCarFlowType] = useState('new'); // 'new' or 'existing'
+  const [carFlowType, setCarFlowType] = useState('new'); 
   const [carFormData, setCarFormData] = useState({ license_plate: '', make: '', model: '', year: '', color: '', existing_car_id: '' });
 
   const [globalFilter, setGlobalFilter] = useState(initialFilter || "");
@@ -128,7 +139,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     download(config)(csv);
   };
 
-  // ... [Keep all the Print methods exactly the same] ...
   const handlePrintPermit = (client) => {
     const clientVehicles = allCars.filter(car => car.owner_id == client.id);
     const monthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -243,7 +253,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     });
   };
 
-  // --- NEW: Flow Interceptor ---
   const handleOpenAddFlow = () => {
     Swal.fire({
       title: 'Add New Client',
@@ -285,10 +294,18 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
 
   const handleCloseModal = () => setModalOpen(false);
 
-  // --- STEP 1: CLIENT SUBMIT ---
+  // FIX: Custom close handler to ignore backdrop clicks and escape keys
+  const handleDialogClose = (event, reason) => {
+    if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+      return; 
+    }
+    handleCloseModal();
+  };
+
   const handleFormSubmit = async () => {
     if (!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.type || !formData.status) {
-      Swal.fire({ icon: "error", title: "Missing Fields", text: "Please fill out all required fields. First Name, Last Name, Type, and Status cannot be empty." });
+      // FIX: Use ModalSwal so it appears OVER the open dialog
+      ModalSwal.fire({ icon: "error", title: "Missing Fields", text: "Please fill out all required fields. First Name, Last Name, Type, and Status cannot be empty." });
       return; 
     }
 
@@ -312,30 +329,28 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         const responseData = await res.json();
         await loadClients();
         
-        // If we are in the multi-step flow, capture ID and go to Step 2
         if (!isEditMode && flowMode === 'client-and-car') {
             setNewlyCreatedClientId(responseData.id);
             setFlowStep(2);
-            Swal.fire({ title: "Client Created!", text: "Now let's associate a vehicle.", icon: "success", timer: 1500, showConfirmButton: false });
+            ModalSwal.fire({ title: "Client Created!", text: "Now let's associate a vehicle.", icon: "success", timer: 1500, showConfirmButton: false });
         } else {
             handleCloseModal();
             Swal.fire({ title: "Success!", text: "Data has been updated!", icon: "success" });
         }
       } else {
         const err = await res.json();
-        Swal.fire({ icon: "error", title: "Error", text: err.error });
+        ModalSwal.fire({ icon: "error", title: "Error", text: err.error });
       }
     } catch (err) { 
       console.error(err); 
-      Swal.fire({ icon: "error", title: "Oops...", text: "Something went wrong! Please try again in a few minutes." });
+      ModalSwal.fire({ icon: "error", title: "Oops...", text: "Something went wrong! Please try again in a few minutes." });
     }
   };
 
-  // --- STEP 2: CAR SUBMIT ---
   const handleCarSubmit = async () => {
     if (carFlowType === 'new') {
         if (!carFormData.license_plate?.trim() || !carFormData.make?.trim() || !carFormData.model?.trim() || !carFormData.year?.toString().trim() || !carFormData.color?.trim()) {
-            Swal.fire({ icon: "error", title: "Missing Fields", text: "Please fill out all new vehicle details." });
+            ModalSwal.fire({ icon: "error", title: "Missing Fields", text: "Please fill out all new vehicle details." });
             return; 
         }
 
@@ -356,18 +371,16 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
                 Swal.fire({ title: "Success!", text: "Client and New Vehicle created!", icon: "success" });
             } else {
                 const errData = await res.json();
-                Swal.fire({ icon: "error", title: "Server Error", text: errData.error });
+                ModalSwal.fire({ icon: "error", title: "Server Error", text: errData.error });
             }
         } catch(err) { console.error(err); }
 
     } else {
-        // Link Existing Vehicle
         if (!carFormData.existing_car_id) {
-            Swal.fire({ icon: "error", title: "Missing Fields", text: "Please select an existing vehicle from the list." });
+            ModalSwal.fire({ icon: "error", title: "Missing Fields", text: "Please select an existing vehicle from the list." });
             return;
         }
 
-        // We need to fetch the existing car details to satisfy the PUT endpoint
         const existingCar = allCars.find(c => c.id == carFormData.existing_car_id);
         if(!existingCar) return;
 
@@ -384,7 +397,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
                 Swal.fire({ title: "Success!", text: "Vehicle successfully linked to new client!", icon: "success" });
             } else {
                 const errData = await res.json();
-                Swal.fire({ icon: "error", title: "Server Error", text: errData.error });
+                ModalSwal.fire({ icon: "error", title: "Server Error", text: errData.error });
             }
         } catch(err) { console.error(err); }
     }
@@ -469,7 +482,8 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         }}
       />
 
-      <Dialog open={modalOpen} onClose={handleCloseModal} fullWidth maxWidth="sm">
+      {/* FIX: Replaced standard onClose with handleDialogClose to prevent accidental backdrop clicks */}
+      <Dialog open={modalOpen} onClose={handleDialogClose} fullWidth maxWidth="sm">
         <DialogTitle sx={{fontWeight:'bold', borderBottom: '1px solid #eee', mb: 2}}>
             {flowStep === 2 ? "Step 2: Associate Vehicle" : (isEditMode ? "Edit Client" : "Step 1: Add New Client")}
         </DialogTitle>
@@ -573,22 +587,23 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
                             </Grid>
                         </Grid>
                     ) : (
-                        <TextField 
-                            select 
-                            fullWidth 
-                            required
-                            label="Select an Existing Vehicle" 
-                            value={carFormData.existing_car_id} 
-                            error={carFormData.existing_car_id === ""}
-                            onChange={(e) => setCarFormData({...carFormData, existing_car_id: e.target.value})}
-                        >
-                            <MenuItem value="" disabled><em>Select a Vehicle</em></MenuItem>
-                            {allCars.map((c) => (
-                                <MenuItem key={c.id} value={c.id}>
-                                    {c.license_plate?.split('\r')[0]} - {c.make} {c.model} {c.owner_id ? `(Owned by ID: ${c.owner_id})` : '(Unassigned)'}
-                                </MenuItem>
-                            ))}
-                        </TextField>
+                        /* FIX: Transformed into a searchable Autocomplete dropdown */
+                        <Autocomplete
+                            options={allCars}
+                            getOptionLabel={(option) => `${option.license_plate?.split('\r')[0] || 'Unknown'} - ${option.make || ''} ${option.model || ''} ${option.owner_id ? `(Owned by ID: ${option.owner_id})` : '(Unassigned)'}`}
+                            value={allCars.find(c => c.id === carFormData.existing_car_id) || null}
+                            onChange={(event, newValue) => {
+                                setCarFormData({...carFormData, existing_car_id: newValue ? newValue.id : ''});
+                            }}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="Search for an Existing Vehicle"
+                                    required
+                                    error={carFormData.existing_car_id === ""}
+                                />
+                            )}
+                        />
                     )}
                 </Box>
             )}
