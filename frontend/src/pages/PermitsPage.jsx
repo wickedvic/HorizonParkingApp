@@ -178,17 +178,15 @@ export default function PermitsPage({ user, initialFilter }) {
     <Box sx={{ p: 3 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Daily Parking Permits</Typography>
-        {/* FIX: Only render the Issue Permit button if the user is an admin */}
-        {user?.role === 'admin' && (
-          <Button
-            variant="contained"
-            startIcon={showForm ? <CloseIcon /> : <AddIcon />}
-            color={showForm ? "error" : "primary"}
-            onClick={() => setShowForm(!showForm)}
-          >
-            {showForm ? "Cancel" : "Issue Permit"}
-          </Button>
-        )}
+        
+        <Button
+          variant="contained"
+          startIcon={showForm ? <CloseIcon /> : <AddIcon />}
+          color={showForm ? "error" : "primary"}
+          onClick={() => setShowForm(!showForm)}
+        >
+          {showForm ? "Cancel" : "Issue Permit"}
+        </Button>
       </Stack>
 
       <Collapse in={showForm}>
@@ -228,7 +226,7 @@ export default function PermitsPage({ user, initialFilter }) {
         renderRowActions={({ row }) => (
           <Box sx={{ display: 'flex', gap: '0.5rem' }}>
             <Tooltip title="Print Permit"><IconButton onClick={() => handlePrintPermit(row.original)} color="primary"><PrintIcon /></IconButton></Tooltip>
-            {/* FIX: Ensure standard users also cannot delete permits */}
+            {/* Standard users cannot delete permits; only admins see this */}
             {user?.role === 'admin' && (
               <Tooltip title="Delete"><IconButton onClick={() => handleDeletePermit(row.original.TempPermitID)} color="error"><DeleteIcon /></IconButton></Tooltip>
             )}
