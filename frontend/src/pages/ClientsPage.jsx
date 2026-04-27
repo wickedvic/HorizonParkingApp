@@ -7,7 +7,7 @@ import {
   Box, Typography, Chip, List, ListItem, ListItemText, Divider,
   ToggleButton, ToggleButtonGroup, Stack, Grid, Button, Paper, Link, Tooltip,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem,
-  Autocomplete // FIX: Imported Autocomplete for searchable dropdowns
+  Autocomplete 
 } from "@mui/material";
 import { 
   DirectionsCar as CarIcon, 
@@ -26,7 +26,6 @@ import { mkConfig, generateCsv, download } from 'export-to-csv';
 
 const csvConfigBase = { fieldSeparator: ',', decimalSeparator: '.', useKeysAsHeaders: true };
 
-// FIX: Custom SweetAlert instance to sit ABOVE the MUI Dialog (MUI Dialog z-index is 1300)
 const ModalSwal = Swal.mixin({
   didOpen: () => {
     const container = Swal.getContainer();
@@ -294,7 +293,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
 
   const handleCloseModal = () => setModalOpen(false);
 
-  // FIX: Custom close handler to ignore backdrop clicks and escape keys
   const handleDialogClose = (event, reason) => {
     if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
       return; 
@@ -304,7 +302,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
 
   const handleFormSubmit = async () => {
     if (!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.type || !formData.status) {
-      // FIX: Use ModalSwal so it appears OVER the open dialog
       ModalSwal.fire({ icon: "error", title: "Missing Fields", text: "Please fill out all required fields. First Name, Last Name, Type, and Status cannot be empty." });
       return; 
     }
@@ -403,10 +400,14 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     }
   };
 
+  // FIX: Combined firstName and lastName into a single "Full Name" column
   const columns = useMemo(() => [
     { accessorKey: "id", header: "ID", size: 80 },
-    { accessorKey: "firstName", header: "First Name" },
-    { accessorKey: "lastName", header: "Last Name" },
+    { 
+      id: "fullName",
+      header: "Full Name",
+      accessorFn: (row) => `${row.firstName || ''} ${row.lastName || ''}`.trim(),
+    },
     { accessorKey: "type", header: "Type", Cell: ({ cell }) => <Chip label={cell.getValue()?.toUpperCase()} variant="outlined" size="small" /> },
     { accessorKey: "status", header: "Status", Cell: ({ cell }) => (<Chip label={cell.getValue()?.toUpperCase()} color={normalize(cell.getValue()) === 'active' ? 'success' : 'default'} size="small" />) },
     { accessorKey: "permitNumber", header: "Permit #" },
@@ -482,7 +483,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         }}
       />
 
-      {/* FIX: Replaced standard onClose with handleDialogClose to prevent accidental backdrop clicks */}
       <Dialog open={modalOpen} onClose={handleDialogClose} fullWidth maxWidth="sm">
         <DialogTitle sx={{fontWeight:'bold', borderBottom: '1px solid #eee', mb: 2}}>
             {flowStep === 2 ? "Step 2: Associate Vehicle" : (isEditMode ? "Edit Client" : "Step 1: Add New Client")}
@@ -587,7 +587,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
                             </Grid>
                         </Grid>
                     ) : (
-                        /* FIX: Transformed into a searchable Autocomplete dropdown */
                         <Autocomplete
                             options={allCars}
                             getOptionLabel={(option) => `${option.license_plate?.split('\r')[0] || 'Unknown'} - ${option.make || ''} ${option.model || ''} ${option.owner_id ? `(Owned by ID: ${option.owner_id})` : '(Unassigned)'}`}
