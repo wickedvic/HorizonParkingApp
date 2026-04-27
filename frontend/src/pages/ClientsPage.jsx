@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
-import Swal from 'sweetalert2'; // FIX: Imported SweetAlert2
+import Swal from 'sweetalert2';
 import {
   Box, Typography, Chip, List, ListItem, ListItemText, Divider,
   ToggleButton, ToggleButtonGroup, Stack, Grid, Button, Paper, Link, Tooltip,
@@ -34,6 +34,13 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const [modalOpen, setModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({ firstName: '', lastName: '', type: 'tenant', status: 'active', permitNumber: '', feeCharged: '0', id: null });
+
+  // --- NEW MULTI-STEP FLOW STATES ---
+  const [flowMode, setFlowMode] = useState('client-only'); // 'client-only' or 'client-and-car'
+  const [flowStep, setFlowStep] = useState(1); // 1 = Client Form, 2 = Car Form
+  const [newlyCreatedClientId, setNewlyCreatedClientId] = useState(null);
+  const [carFlowType, setCarFlowType] = useState('new'); // 'new' or 'existing'
+  const [carFormData, setCarFormData] = useState({ license_plate: '', make: '', model: '', year: '', color: '', existing_car_id: '' });
 
   const [globalFilter, setGlobalFilter] = useState(initialFilter || "");
   const [columnFilters, setColumnFilters] = useState([]);
@@ -79,7 +86,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     } catch (err) { console.error(err); }
   }
 
-  // FIX: Converted delete confirmation to SweetAlert2
   const handleDeleteClient = (id, name) => {
     Swal.fire({
       title: "Are you sure?",
@@ -97,19 +103,11 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
             Swal.fire("Deleted!", "The client has been removed.", "success");
           } else {
             const err = await res.json();
-            Swal.fire({
-              icon: "error",
-              title: "Oops...",
-              text: `Error deleting client: ${err.error}`,
-            });
+            Swal.fire({ icon: "error", title: "Oops...", text: `Error deleting client: ${err.error}` });
           }
         } catch (err) { 
           console.error("Error deleting client:", err); 
-          Swal.fire({
-            icon: "error",
-            title: "Oops...",
-            text: "Something went wrong! Please try again in a few minutes.",
-          });
+          Swal.fire({ icon: "error", title: "Oops...", text: "Something went wrong! Please try again in a few minutes." });
         }
       } else if (result.isDismissed) {
         Swal.fire("Cancelled", "Changes were not saved.", "info");
@@ -130,6 +128,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     download(config)(csv);
   };
 
+  // ... [Keep all the Print methods exactly the same] ...
   const handlePrintPermit = (client) => {
     const clientVehicles = allCars.filter(car => car.owner_id == client.id);
     const monthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -202,8 +201,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     printWindow.document.close();
   };
 
-  // FIX: Converted mass payment confirmation and alerts to SweetAlert2
-  const handleMassPayment = () => {
+  const handleMassPayment = async () => {
     const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
     
     Swal.fire({
@@ -222,11 +220,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
           });
 
           if (activeClients.length === 0) {
-            Swal.fire({
-              icon: "error",
-              title: "Oops...",
-              text: "No active clients with a valid fee greater than $0 were found.",
-            });
+            Swal.fire({ icon: "error", title: "Oops...", text: "No active clients with a valid fee greater than $0 were found." });
             return;
           }
 
@@ -236,53 +230,65 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
           });
           const data = await res.json();
           if (res.ok) { 
-            Swal.fire({
-              title: "Process Complete!",
-              html: `Payments Created: <b>${data.processed}</b><br/>Already Paid / Skipped: <b>${data.skipped}</b>`,
-              icon: "success"
-            });
+            Swal.fire({ title: "Process Complete!", html: `Payments Created: <b>${data.processed}</b><br/>Already Paid / Skipped: <b>${data.skipped}</b>`, icon: "success" });
             loadPayments(); 
           } else {
-            Swal.fire({
-              icon: "error",
-              title: "Server Error",
-              text: data.error,
-            });
+            Swal.fire({ icon: "error", title: "Server Error", text: data.error });
           }
         } catch (err) { 
           console.error(err); 
-          Swal.fire({
-            icon: "error",
-            title: "Oops...",
-            text: "Something went wrong! Please try again in a few minutes.",
-          });
+          Swal.fire({ icon: "error", title: "Oops...", text: "Something went wrong! Please try again in a few minutes." });
         }
       }
     });
   };
 
-  const handleOpenAddModal = () => {
+  // --- NEW: Flow Interceptor ---
+  const handleOpenAddFlow = () => {
+    Swal.fire({
+      title: 'Add New Client',
+      text: 'Would you like to add just a client, or a client and their vehicle at the same time?',
+      icon: 'question',
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonColor: '#1976d2',
+      denyButtonColor: '#2e7d32',
+      confirmButtonText: 'Client & Vehicle',
+      denyButtonText: 'Just Client',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        startFlow('client-and-car');
+      } else if (result.isDenied) {
+        startFlow('client-only');
+      }
+    });
+  };
+
+  const startFlow = (mode) => {
     setIsEditMode(false);
+    setFlowMode(mode);
+    setFlowStep(1);
     setFormData({ firstName: '', lastName: '', type: 'tenant', status: 'active', permitNumber: '', feeCharged: '0', id: null });
+    setCarFormData({ license_plate: '', make: '', model: '', year: '', color: '', existing_car_id: '' });
+    setCarFlowType('new');
     setModalOpen(true);
   };
 
   const handleOpenEditModal = (client) => {
     setIsEditMode(true);
+    setFlowMode('client-only');
+    setFlowStep(1);
     setFormData({ ...client });
     setModalOpen(true);
   };
 
   const handleCloseModal = () => setModalOpen(false);
 
-  // FIX: Converted form validation and submission alerts to SweetAlert2
+  // --- STEP 1: CLIENT SUBMIT ---
   const handleFormSubmit = async () => {
     if (!formData.firstName?.trim() || !formData.lastName?.trim() || !formData.type || !formData.status) {
-      Swal.fire({
-        icon: "error",
-        title: "Missing Fields",
-        text: "Please fill out all required fields. First Name, Last Name, Type, and Status cannot be empty.",
-      });
+      Swal.fire({ icon: "error", title: "Missing Fields", text: "Please fill out all required fields. First Name, Last Name, Type, and Status cannot be empty." });
       return; 
     }
 
@@ -303,28 +309,84 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         body: JSON.stringify(payload),
       });
       if (res.ok) {
+        const responseData = await res.json();
         await loadClients();
-        handleCloseModal();
-        Swal.fire({
-          title: "Success!",
-          text: "Data has been updated!",
-          icon: "success"
-        });
+        
+        // If we are in the multi-step flow, capture ID and go to Step 2
+        if (!isEditMode && flowMode === 'client-and-car') {
+            setNewlyCreatedClientId(responseData.id);
+            setFlowStep(2);
+            Swal.fire({ title: "Client Created!", text: "Now let's associate a vehicle.", icon: "success", timer: 1500, showConfirmButton: false });
+        } else {
+            handleCloseModal();
+            Swal.fire({ title: "Success!", text: "Data has been updated!", icon: "success" });
+        }
       } else {
         const err = await res.json();
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: err.error,
-        });
+        Swal.fire({ icon: "error", title: "Error", text: err.error });
       }
     } catch (err) { 
       console.error(err); 
-      Swal.fire({
-        icon: "error",
-        title: "Oops...",
-        text: "Something went wrong! Please try again in a few minutes.",
-      });
+      Swal.fire({ icon: "error", title: "Oops...", text: "Something went wrong! Please try again in a few minutes." });
+    }
+  };
+
+  // --- STEP 2: CAR SUBMIT ---
+  const handleCarSubmit = async () => {
+    if (carFlowType === 'new') {
+        if (!carFormData.license_plate?.trim() || !carFormData.make?.trim() || !carFormData.model?.trim() || !carFormData.year?.toString().trim() || !carFormData.color?.trim()) {
+            Swal.fire({ icon: "error", title: "Missing Fields", text: "Please fill out all new vehicle details." });
+            return; 
+        }
+
+        const payload = {
+            ...carFormData,
+            owner_id: newlyCreatedClientId,
+            addedBy: (user?.username || 'ADM').substring(0, 3).toUpperCase()
+        };
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/cars`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                await loadAllCars();
+                handleCloseModal();
+                Swal.fire({ title: "Success!", text: "Client and New Vehicle created!", icon: "success" });
+            } else {
+                const errData = await res.json();
+                Swal.fire({ icon: "error", title: "Server Error", text: errData.error });
+            }
+        } catch(err) { console.error(err); }
+
+    } else {
+        // Link Existing Vehicle
+        if (!carFormData.existing_car_id) {
+            Swal.fire({ icon: "error", title: "Missing Fields", text: "Please select an existing vehicle from the list." });
+            return;
+        }
+
+        // We need to fetch the existing car details to satisfy the PUT endpoint
+        const existingCar = allCars.find(c => c.id == carFormData.existing_car_id);
+        if(!existingCar) return;
+
+        const payload = { ...existingCar, owner_id: newlyCreatedClientId };
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/cars/${existingCar.id}`, {
+                method: "PUT", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                await loadAllCars();
+                handleCloseModal();
+                Swal.fire({ title: "Success!", text: "Vehicle successfully linked to new client!", icon: "success" });
+            } else {
+                const errData = await res.json();
+                Swal.fire({ icon: "error", title: "Server Error", text: errData.error });
+            }
+        } catch(err) { console.error(err); }
     }
   };
 
@@ -366,7 +428,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
           <Box sx={{ display: 'flex', gap: '10px' }}>
             {user?.role === 'admin' && (
               <>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddModal}>Add New Client</Button>
+                <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddFlow}>Add New Client</Button>
                 <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
                 <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
                 <Button startIcon={<FileDownloadIcon />} onClick={handleExportAll} variant="outlined" size="small">Export All</Button>
@@ -409,73 +471,143 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
 
       <Dialog open={modalOpen} onClose={handleCloseModal} fullWidth maxWidth="sm">
         <DialogTitle sx={{fontWeight:'bold', borderBottom: '1px solid #eee', mb: 2}}>
-            {isEditMode ? "Edit Client" : "Add New Client"}
+            {flowStep === 2 ? "Step 2: Associate Vehicle" : (isEditMode ? "Edit Client" : "Step 1: Add New Client")}
         </DialogTitle>
         <DialogContent>
-            <Grid container spacing={2} sx={{mt: 1}}>
-                <Grid item xs={6}>
-                    <TextField 
-                      fullWidth 
-                      required
-                      label="First Name" 
-                      value={formData.firstName} 
-                      error={formData.firstName === ""}
-                      onChange={(e) => setFormData({...formData, firstName: e.target.value})} 
-                    />
-                </Grid>
-                <Grid item xs={6}>
-                    <TextField 
-                      fullWidth 
-                      required
-                      label="Last Name" 
-                      value={formData.lastName} 
-                      error={formData.lastName === ""}
-                      onChange={(e) => setFormData({...formData, lastName: e.target.value})} 
-                    />
-                </Grid>
-                <Grid item xs={6}>
-                    <TextField 
-                      select 
-                      fullWidth 
-                      required 
-                      label="Type" 
-                      value={formData.type} 
-                      onChange={(e) => {
-                        const newType = e.target.value;
-                        let generatedPermit = formData.permitNumber;
+            
+            {/* --- STEP 1: CLIENT FORM --- */}
+            {flowStep === 1 && (
+                <Grid container spacing={2} sx={{mt: 1}}>
+                    <Grid item xs={6}>
+                        <TextField 
+                          fullWidth 
+                          required
+                          label="First Name" 
+                          value={formData.firstName} 
+                          error={formData.firstName === ""}
+                          onChange={(e) => setFormData({...formData, firstName: e.target.value})} 
+                        />
+                    </Grid>
+                    <Grid item xs={6}>
+                        <TextField 
+                          fullWidth 
+                          required
+                          label="Last Name" 
+                          value={formData.lastName} 
+                          error={formData.lastName === ""}
+                          onChange={(e) => setFormData({...formData, lastName: e.target.value})} 
+                        />
+                    </Grid>
+                    <Grid item xs={6}>
+                        <TextField 
+                          select 
+                          fullWidth 
+                          required 
+                          label="Type" 
+                          value={formData.type} 
+                          onChange={(e) => {
+                            const newType = e.target.value;
+                            let generatedPermit = formData.permitNumber;
 
-                        if (!isEditMode) {
-                            if (newType === 'payer') {
-                                generatedPermit = `10001-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-                            } else if (formData.type === 'payer') {
-                                generatedPermit = ''; 
+                            if (!isEditMode) {
+                                if (newType === 'payer') {
+                                    generatedPermit = `10001-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+                                } else if (formData.type === 'payer') {
+                                    generatedPermit = ''; 
+                                }
                             }
-                        }
 
-                        setFormData({...formData, type: newType, permitNumber: generatedPermit});
-                      }}
+                            setFormData({...formData, type: newType, permitNumber: generatedPermit});
+                          }}
+                        >
+                            <MenuItem value="tenant">Tenant</MenuItem>
+                            <MenuItem value="employee">Employee</MenuItem>
+                            <MenuItem value="payer">Payer</MenuItem>
+                        </TextField>
+                    </Grid>
+                    <Grid item xs={6}>
+                        <TextField select fullWidth required label="Status" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
+                            <MenuItem value="active">Active</MenuItem><MenuItem value="inactive">Inactive</MenuItem>
+                        </TextField>
+                    </Grid>
+                    <Grid item xs={6}>
+                        <TextField fullWidth label="Permit #" value={formData.permitNumber} onChange={(e) => setFormData({...formData, permitNumber: e.target.value})} />
+                    </Grid>
+                    <Grid item xs={6}>
+                        <TextField fullWidth label="Cost" type="number" value={formData.feeCharged} onChange={(e) => setFormData({...formData, feeCharged: e.target.value})} />
+                    </Grid>
+                </Grid>
+            )}
+
+            {/* --- STEP 2: CAR FORM --- */}
+            {flowStep === 2 && (
+                <Box sx={{ mt: 2 }}>
+                    <ToggleButtonGroup 
+                        color="primary" 
+                        value={carFlowType} 
+                        exclusive 
+                        onChange={(e, v) => v && setCarFlowType(v)} 
+                        fullWidth 
+                        sx={{ mb: 3 }}
                     >
-                        <MenuItem value="tenant">Tenant</MenuItem>
-                        <MenuItem value="employee">Employee</MenuItem>
-                        <MenuItem value="payer">Payer</MenuItem>
-                    </TextField>
-                </Grid>
-                <Grid item xs={6}>
-                    <TextField select fullWidth required label="Status" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
-                        <MenuItem value="active">Active</MenuItem><MenuItem value="inactive">Inactive</MenuItem>
-                    </TextField>
-                </Grid>
-                <Grid item xs={6}>
-                    <TextField fullWidth label="Permit #" value={formData.permitNumber} onChange={(e) => setFormData({...formData, permitNumber: e.target.value})} />
-                </Grid>
-                <Grid item xs={6}>
-                    <TextField fullWidth label="Cost" type="number" value={formData.feeCharged} onChange={(e) => setFormData({...formData, feeCharged: e.target.value})} />
-                </Grid>
-            </Grid>
+                        <ToggleButton value="new">Create New Vehicle</ToggleButton>
+                        <ToggleButton value="existing">Link Existing Vehicle</ToggleButton>
+                    </ToggleButtonGroup>
+
+                    {carFlowType === 'new' ? (
+                        <Grid container spacing={2}>
+                            <Grid item xs={12}>
+                                <TextField fullWidth required label="License Plate" value={carFormData.license_plate} error={carFormData.license_plate === ""} onChange={(e) => setCarFormData({...carFormData, license_plate: e.target.value})} />
+                            </Grid>
+                            <Grid item xs={6}>
+                                <TextField fullWidth required label="Make" value={carFormData.make} error={carFormData.make === ""} onChange={(e) => setCarFormData({...carFormData, make: e.target.value})} />
+                            </Grid>
+                            <Grid item xs={6}>
+                                <TextField fullWidth required label="Model" value={carFormData.model} error={carFormData.model === ""} onChange={(e) => setCarFormData({...carFormData, model: e.target.value})} />
+                            </Grid>
+                            <Grid item xs={6}>
+                                <TextField fullWidth required label="Year" value={carFormData.year} error={carFormData.year === ""} onChange={(e) => setCarFormData({...carFormData, year: e.target.value})} />
+                            </Grid>
+                            <Grid item xs={6}>
+                                <TextField fullWidth required label="Color" value={carFormData.color} error={carFormData.color === ""} onChange={(e) => setCarFormData({...carFormData, color: e.target.value})} />
+                            </Grid>
+                        </Grid>
+                    ) : (
+                        <TextField 
+                            select 
+                            fullWidth 
+                            required
+                            label="Select an Existing Vehicle" 
+                            value={carFormData.existing_car_id} 
+                            error={carFormData.existing_car_id === ""}
+                            onChange={(e) => setCarFormData({...carFormData, existing_car_id: e.target.value})}
+                        >
+                            <MenuItem value="" disabled><em>Select a Vehicle</em></MenuItem>
+                            {allCars.map((c) => (
+                                <MenuItem key={c.id} value={c.id}>
+                                    {c.license_plate?.split('\r')[0]} - {c.make} {c.model} {c.owner_id ? `(Owned by ID: ${c.owner_id})` : '(Unassigned)'}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                    )}
+                </Box>
+            )}
+
         </DialogContent>
         <DialogActions sx={{p: 3}}>
-            <Button onClick={handleCloseModal}>Cancel</Button>
-            <Button variant="contained" onClick={handleFormSubmit}>{isEditMode ? "Save Changes" : "Create Client"}</Button>
+            {flowStep === 1 ? (
+                <>
+                    <Button onClick={handleCloseModal}>Cancel</Button>
+                    <Button variant="contained" onClick={handleFormSubmit}>
+                        {isEditMode ? "Save Changes" : (flowMode === 'client-and-car' ? "Next: Add Vehicle" : "Create Client")}
+                    </Button>
+                </>
+            ) : (
+                <>
+                    <Button onClick={handleCloseModal}>Skip / Do Later</Button>
+                    <Button variant="contained" onClick={handleCarSubmit}>Save Vehicle</Button>
+                </>
+            )}
         </DialogActions>
       </Dialog>
     </Box>
