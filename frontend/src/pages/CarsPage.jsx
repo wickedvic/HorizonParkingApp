@@ -261,10 +261,15 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       }
     },
     {
-      accessorKey: "owner_id",
-      header: "Owner",
-      accessorFn: (row) => `${row.owner_first || ''} ${row.owner_last || ''}`.trim(),
+      // FIX: Changed accessorKey to a simple string accessorFn so it safely formats for the global filter string check
+      accessorFn: (row) => {
+        const first = row.owner_first || "";
+        const last = row.owner_last || "";
+        const fullName = `${first} ${last}`.trim();
+        return fullName || `ID: ${row.owner_id || 'Unknown'}`;
+      },
       id: "owner_name",
+      header: "Owner",
       Cell: ({ row, renderedCellValue }) => {
         const nameStr = renderedCellValue?.toString() || "";
         const ownerId = row.original.owner_id;
@@ -277,14 +282,13 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
               sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }} 
               onClick={() => {
                 if (ownerId) {
-                  // FIX: Passing ownerId directly instead of an object
                   onNavigateClient(ownerId);
                 } else {
                   onNavigateClient(row.original.owner_last || "");
                 }
               }}
             >
-              {nameStr !== "" ? nameStr : `ID: ${row.original.owner_id}`}
+              {nameStr}
             </Link>
           </Box>
         );
