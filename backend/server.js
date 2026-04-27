@@ -87,6 +87,18 @@ app.put("/clients/:id", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// FIX: Added delete endpoint for clients
+app.delete("/clients/:id", async (req, res) => {
+  try {
+    await pool.query("DELETE FROM People WHERE PeopleID = ?", [req.params.id]);
+    res.json({ success: true });
+  } catch (err) { 
+    console.error("DELETE CLIENT ERROR:", err.message);
+    // Note: If foreign keys exist (e.g. cars tied to this owner), this will fail unless cascading deletes are set up.
+    res.status(500).json({ error: "Failed to delete client. They may have attached records like vehicles or payments." }); 
+  }
+});
+
 // --- CARS (VEHICLES) ---
 app.get("/cars", async (req, res) => {
   try {

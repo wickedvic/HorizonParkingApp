@@ -12,6 +12,7 @@ import {
   Badge as PermitIcon, 
   Add as AddIcon, 
   Edit as EditIcon, 
+  Delete as DeleteIcon, // FIX: Imported DeleteIcon
   PictureAsPdf as PdfIcon,
   Payments as CashIcon,
   History as HistoryIcon,
@@ -31,7 +32,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   
   const [modalOpen, setModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  // FIX: Default cost is now '0'
   const [formData, setFormData] = useState({ firstName: '', lastName: '', type: 'tenant', status: 'active', permitNumber: '', feeCharged: '0', id: null });
 
   const [globalFilter, setGlobalFilter] = useState(initialFilter || "");
@@ -41,7 +41,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     loadClients(); loadAllCars(); loadPayments();
   }, []);
 
-  // FIX: Sync initialFilter changes to the table's state
   useEffect(() => {
     setGlobalFilter(initialFilter || "");
   }, [initialFilter]);
@@ -71,6 +70,21 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       setPayments(Array.isArray(data) ? data : []);
     } catch (err) { console.error(err); }
   }
+
+  // FIX: Added delete handler for clients
+  const handleDeleteClient = async (id, name) => {
+    if (window.confirm(`Are you sure you want to delete client: ${name}?`)) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/clients/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          loadClients();
+        } else {
+          const err = await res.json();
+          alert(`Error deleting client: ${err.error}`);
+        }
+      } catch (err) { console.error("Error deleting client:", err); }
+    }
+  };
 
   const handleExportByStatus = (status) => {
     const filteredData = clients.filter(c => normalize(c.status) === normalize(status));
@@ -188,7 +202,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
 
   const handleOpenAddModal = () => {
     setIsEditMode(false);
-    // FIX: Default cost is now '0'
     setFormData({ firstName: '', lastName: '', type: 'tenant', status: 'active', permitNumber: '', feeCharged: '0', id: null });
     setModalOpen(true);
   };
@@ -269,12 +282,15 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         enableRowActions
         renderTopToolbarCustomActions={() => (
           <Box sx={{ display: 'flex', gap: '10px' }}>
+            {/* FIX: Wrapped Add button and all Export buttons so they only show for admin */}
             {user?.role === 'admin' && (
-              <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddModal}>Add New Client</Button>
+              <>
+                <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddModal}>Add New Client</Button>
+                <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
+                <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
+                <Button startIcon={<FileDownloadIcon />} onClick={handleExportAll} variant="outlined" size="small">Export All</Button>
+              </>
             )}
-            <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
-            <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
-            <Button startIcon={<FileDownloadIcon />} onClick={handleExportAll} variant="outlined" size="small">Export All</Button>
           </Box>
         )}
         renderRowActions={({ row }) => (
@@ -283,8 +299,12 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
             <Tooltip title="Monthly Receipt"><IconButton onClick={() => handlePrintReceipt(row.original)} color="primary"><PdfIcon /></IconButton></Tooltip>
             <Tooltip title="Payment History"><IconButton onClick={() => handlePrintHistory(row.original)} color="info"><HistoryIcon /></IconButton></Tooltip>
             
+            {/* FIX: Add delete button inside the admin check */}
             {user?.role === 'admin' && (
-              <Tooltip title="Edit"><IconButton onClick={() => handleOpenEditModal(row.original)}><EditIcon /></IconButton></Tooltip>
+              <>
+                <Tooltip title="Edit"><IconButton onClick={() => handleOpenEditModal(row.original)}><EditIcon /></IconButton></Tooltip>
+                <Tooltip title="Delete"><IconButton color="error" onClick={() => handleDeleteClient(row.original.id, `${row.original.firstName} ${row.original.lastName}`)}><DeleteIcon /></IconButton></Tooltip>
+              </>
             )}
           </Stack>
         )}
@@ -334,7 +354,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
                     />
                 </Grid>
                 <Grid item xs={6}>
-                    {/* FIX: Generate custom permit if Type is 'payer' on a new creation */}
                     <TextField 
                       select 
                       fullWidth 
