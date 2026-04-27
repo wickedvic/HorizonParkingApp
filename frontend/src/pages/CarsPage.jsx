@@ -269,9 +269,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       },
       id: "owner_name",
       header: "Owner",
-      // FIX: Rendered directly to preserve MRT search highlighting instead of calling toString()
       Cell: ({ row, renderedCellValue }) => {
-        const ownerId = row.original.owner_id;
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <PersonIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
@@ -280,10 +278,16 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
               variant="body2" 
               sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }} 
               onClick={() => {
-                if (ownerId) {
-                  onNavigateClient(ownerId);
+                // FIX: Build the full name directly from raw data to pass to the filter
+                const first = row.original.owner_first || "";
+                const last = row.original.owner_last || "";
+                const fullName = `${first} ${last}`.trim();
+                
+                if (fullName) {
+                  onNavigateClient(fullName);
                 } else {
-                  onNavigateClient(row.original.owner_last || "");
+                  // Fallback to ID if no name exists
+                  onNavigateClient(row.original.owner_id?.toString() || "");
                 }
               }}
             >
