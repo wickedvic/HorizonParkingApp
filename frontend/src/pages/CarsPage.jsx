@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
+import Swal from 'sweetalert2'; // FIX: Imported SweetAlert2
 import { 
   Box, Tooltip, IconButton, Typography, Link, Button, 
   Stack, ToggleButton, ToggleButtonGroup, Dialog, DialogTitle, 
@@ -37,7 +38,14 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       const res = await fetch(`${API_BASE_URL}/cars`);
       const data = await res.json();
       setCars(Array.isArray(data) ? data : []);
-    } catch (err) { console.error("Failed to load cars:", err); }
+    } catch (err) { 
+      console.error("Failed to load cars:", err); 
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "Something went wrong! Please try again in a few minutes.",
+      });
+    }
   };
 
   const loadClients = async () => {
@@ -45,7 +53,9 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       const res = await fetch(`${API_BASE_URL}/clients`);
       const data = await res.json();
       setClients(Array.isArray(data) ? data : []);
-    } catch (err) { console.error("Failed to load clients:", err); }
+    } catch (err) { 
+      console.error("Failed to load clients:", err); 
+    }
   };
 
   // --- MODAL HANDLERS ---
@@ -58,7 +68,11 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   const handleOpenEditModal = (carRow) => {
     if (!carRow.id) {
        loadCars();
-       alert("Synchronizing with database, please click edit again.");
+       Swal.fire({
+         icon: "info",
+         title: "Syncing...",
+         text: "Synchronizing with database, please click edit again."
+       });
        return;
     }
 
@@ -79,7 +93,11 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   const handleFormSubmit = async () => {
     if (isEditMode && (!formData.id || formData.id === '')) {
-        alert("Error: Vehicle ID is missing. The system cannot update an unknown record.");
+        Swal.fire({
+          icon: "error",
+          title: "Oops...",
+          text: "Error: Vehicle ID is missing. The system cannot update an unknown record.",
+        });
         return;
     }
 
@@ -91,7 +109,11 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         !formData.color?.trim() || 
         !formData.owner_id
     ) {
-        alert("Please fill out all vehicle details. No fields can be left empty.");
+        Swal.fire({
+          icon: "error",
+          title: "Missing Fields",
+          text: "Please fill out all vehicle details. No fields can be left empty.",
+        });
         return; 
     }
 
@@ -117,20 +139,63 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       if (res.ok) {
         await loadCars();
         handleCloseModal();
+        Swal.fire({
+          title: "Success!",
+          text: "Data has been updated!",
+          icon: "success"
+        });
       } else {
         const errData = await res.json();
-        alert(`Server Error: ${errData.error || 'Failed to save vehicle'}`);
+        Swal.fire({
+          icon: "error",
+          title: "Server Error",
+          text: errData.error || 'Failed to save vehicle',
+        });
       }
-    } catch (err) { console.error("Form Submit Error:", err); }
+    } catch (err) { 
+      console.error("Form Submit Error:", err); 
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "Something went wrong! Please try again in a few minutes.",
+      });
+    }
   };
 
-  const handleDeleteCar = async (id, plate) => {
-    if (window.confirm(`Are you sure you want to delete vehicle ${plate}?`)) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/cars/${id}`, { method: 'DELETE' });
-        if (res.ok) loadCars();
-      } catch (err) { console.error("Error deleting car:", err); }
-    }
+  const handleDeleteCar = (id, plate) => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: `Do you want to delete vehicle ${plate}?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel"
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/cars/${id}`, { method: 'DELETE' });
+          if (res.ok) {
+            loadCars();
+            Swal.fire("Deleted!", "Data has been updated!", "success");
+          } else {
+            Swal.fire({
+              icon: "error",
+              title: "Oops...",
+              text: "Failed to delete from server.",
+            });
+          }
+        } catch (err) { 
+          console.error("Error deleting car:", err); 
+          Swal.fire({
+            icon: "error",
+            title: "Oops...",
+            text: "Something went wrong! Please try again in a few minutes.",
+          });
+        }
+      } else if (result.isDismissed) {
+        Swal.fire("Cancelled", "Changes are not saved", "info");
+      }
+    });
   };
 
   const handleExportByStatus = (status) => {
@@ -145,9 +210,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   const displayedCars = useMemo(() => {
     return cars.filter(car => {
-      // FIX: If search is active, show all results regardless of active/inactive tab
       if (globalFilter) return true; 
-
       const owner = clients.find(c => c.id == car.owner_id);
       return (owner?.status?.toLowerCase() || "inactive") === statusFilter.toLowerCase();
     });
@@ -212,12 +275,15 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         enableRowActions={user?.role === 'admin'}
         renderTopToolbarCustomActions={() => (
           <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {/* FIX: Wrapped both the Add button AND all Export buttons inside the admin check */}
             {user?.role === 'admin' && (
-              <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddModal}>Add New Vehicle</Button>
+              <>
+                <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddModal}>Add New Vehicle</Button>
+                <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
+                <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
+                <Button startIcon={<FileDownloadIcon />} onClick={() => download(mkConfig({ ...csvConfigBase, filename: 'all-vehicles' }))(generateCsv(mkConfig({ ...csvConfigBase }))(cars))} variant="outlined" size="small">Export All</Button>
+              </>
             )}
-            <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('active')} variant="outlined" size="small" color="success">Export Active</Button>
-            <Button startIcon={<FileDownloadIcon />} onClick={() => handleExportByStatus('inactive')} variant="outlined" size="small" color="error">Export Inactive</Button>
-            <Button startIcon={<FileDownloadIcon />} onClick={() => download(mkConfig({ ...csvConfigBase, filename: 'all-vehicles' }))(generateCsv(mkConfig({ ...csvConfigBase }))(cars))} variant="outlined" size="small">Export All</Button>
           </Box>
         )}
         renderRowActions={({ row }) => (

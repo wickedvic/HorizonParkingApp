@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
+import Swal from 'sweetalert2'; // FIX: Imported SweetAlert2
 import {
   Box, Button, Typography, Paper, TextField, Collapse, Stack, Divider, IconButton, Tooltip
 } from "@mui/material";
@@ -40,23 +41,59 @@ export default function PermitsPage({ user, initialFilter }) {
       const res = await fetch(`${API_BASE_URL}/permits`)
       const data = await res.json()
       setPermits(Array.isArray(data) ? data : [])
-    } catch (err) { console.error("Failed to load permits:", err) }
+    } catch (err) { 
+      console.error("Failed to load permits:", err) 
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "Something went wrong! Please try again in a few minutes.",
+      });
+    }
   }
 
-  const handleDeletePermit = async (tempPermitId) => {
+  const handleDeletePermit = (tempPermitId) => {
     if (!tempPermitId) {
-      alert("Error: Record ID is missing. This record cannot be deleted via the UI until it has a valid TempPermitID.");
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "Error: Record ID is missing. This record cannot be deleted via the UI until it has a valid TempPermitID.",
+      });
       return;
     }
-    if (!window.confirm("Are you sure you want to delete this permit record?")) return;
-    try {
-      const res = await fetch(`${API_BASE_URL}/permits/${tempPermitId}`, { method: "DELETE" });
-      if (res.ok) {
-        loadPermits();
-      } else {
-        alert("Failed to delete from server.");
+    
+    Swal.fire({
+      title: "Are you sure?",
+      text: "Do you want to delete this permit record?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel"
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/permits/${tempPermitId}`, { method: "DELETE" });
+          if (res.ok) {
+            loadPermits();
+            Swal.fire("Deleted!", "Data has been updated!", "success");
+          } else {
+            Swal.fire({
+              icon: "error",
+              title: "Oops...",
+              text: "Failed to delete from server.",
+            });
+          }
+        } catch (err) { 
+          console.error(err); 
+          Swal.fire({
+            icon: "error",
+            title: "Oops...",
+            text: "Something went wrong! Please try again in a few minutes.",
+          });
+        }
+      } else if (result.isDismissed) {
+        Swal.fire("Cancelled", "Changes are not saved", "info");
       }
-    } catch (err) { console.error(err); }
+    });
   }
 
   // Force raw date parsing to avoid UTC to EDT timezone shifting
@@ -139,12 +176,29 @@ export default function PermitsPage({ user, initialFilter }) {
         setShowForm(false)
         setFormData({ ...formData, user_name: "" })
         
+        Swal.fire({
+          title: "Success!",
+          text: "Data has been updated!",
+          icon: "success"
+        });
+
         handlePrintPermit(newPermitPrintData);
       } else {
         const errorData = await res.json();
-        alert(`Error: ${errorData.error || 'Server error'}`);
+        Swal.fire({
+          icon: "error",
+          title: "Oops...",
+          text: `Error: ${errorData.error || 'Server error'}`,
+        });
       }
-    } catch (err) { console.error(err) }
+    } catch (err) { 
+      console.error(err);
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "Something went wrong! Please try again in a few minutes.",
+      }); 
+    }
   }
 
   // Properly handle date overlap rather than just checking the start date
