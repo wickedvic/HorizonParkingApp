@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
-import Swal from 'sweetalert2'; // FIX: Imported SweetAlert2
+import Swal from 'sweetalert2'; 
 import { 
   Box, Tooltip, IconButton, Typography, Link, Button, 
   Stack, ToggleButton, ToggleButtonGroup, Dialog, DialogTitle, 
-  DialogContent, DialogActions, TextField, MenuItem, Grid 
+  DialogContent, DialogActions, TextField, MenuItem, Grid, Chip 
 } from "@mui/material";
 import { 
   Delete as DeleteIcon, Person as PersonIcon, Add as AddIcon, 
@@ -16,6 +16,16 @@ import { MaterialReactTable } from 'material-react-table';
 import { mkConfig, generateCsv, download } from 'export-to-csv';
 
 const csvConfigBase = { fieldSeparator: ',', decimalSeparator: '.', useKeysAsHeaders: true };
+
+// FIX: Custom SweetAlert instance to sit ABOVE the MUI Dialog (MUI Dialog z-index is 1300)
+const ModalSwal = Swal.mixin({
+  didOpen: () => {
+    const container = Swal.getContainer();
+    if (container) {
+      container.style.zIndex = '1400';
+    }
+  }
+});
 
 export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   const [cars, setCars] = useState([]);
@@ -68,7 +78,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   const handleOpenEditModal = (carRow) => {
     if (!carRow.id) {
        loadCars();
-       Swal.fire({
+       ModalSwal.fire({
          icon: "info",
          title: "Syncing...",
          text: "Synchronizing with database, please click edit again."
@@ -91,9 +101,17 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   const handleCloseModal = () => setModalOpen(false);
 
+  // FIX: Custom close handler to ignore backdrop clicks and escape keys
+  const handleDialogClose = (event, reason) => {
+    if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+      return; 
+    }
+    handleCloseModal();
+  };
+
   const handleFormSubmit = async () => {
     if (isEditMode && (!formData.id || formData.id === '')) {
-        Swal.fire({
+        ModalSwal.fire({
           icon: "error",
           title: "Oops...",
           text: "Error: Vehicle ID is missing. The system cannot update an unknown record.",
@@ -109,7 +127,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         !formData.color?.trim() || 
         !formData.owner_id
     ) {
-        Swal.fire({
+        ModalSwal.fire({
           icon: "error",
           title: "Missing Fields",
           text: "Please fill out all vehicle details. No fields can be left empty.",
@@ -146,7 +164,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         });
       } else {
         const errData = await res.json();
-        Swal.fire({
+        ModalSwal.fire({
           icon: "error",
           title: "Server Error",
           text: errData.error || 'Failed to save vehicle',
@@ -154,7 +172,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       }
     } catch (err) { 
       console.error("Form Submit Error:", err); 
-      Swal.fire({
+      ModalSwal.fire({
         icon: "error",
         title: "Oops...",
         text: "Something went wrong! Please try again in a few minutes.",
@@ -226,6 +244,25 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
     { accessorKey: "model", header: "Model" },
     { accessorKey: "year", header: "Year" },
     { accessorKey: "color", header: "Color" },
+    // FIX: Added Status column dynamically checking the owner's status
+    {
+      id: "status",
+      header: "Status",
+      accessorFn: (row) => {
+        const owner = clients.find(c => c.id == row.owner_id);
+        return owner?.status || "inactive";
+      },
+      Cell: ({ cell }) => {
+        const status = cell.getValue()?.toString().toLowerCase().trim() || "inactive";
+        return (
+          <Chip 
+            label={status.toUpperCase()} 
+            color={status === 'active' ? 'success' : 'default'} 
+            size="small" 
+          />
+        );
+      }
+    },
     {
       accessorKey: "owner_id",
       header: "Owner",
@@ -255,7 +292,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         );
       },
     },
-  ], [onNavigateClient]);
+  ], [onNavigateClient, clients]);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -275,7 +312,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         enableRowActions={user?.role === 'admin'}
         renderTopToolbarCustomActions={() => (
           <Box sx={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            {/* FIX: Wrapped both the Add button AND all Export buttons inside the admin check */}
             {user?.role === 'admin' && (
               <>
                 <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddModal}>Add New Vehicle</Button>
@@ -294,7 +330,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
         )}
       />
 
-      <Dialog open={modalOpen} onClose={handleCloseModal} fullWidth maxWidth="sm">
+      <Dialog open={modalOpen} onClose={handleDialogClose} fullWidth maxWidth="sm">
         <DialogTitle sx={{fontWeight:'bold', borderBottom: '1px solid #eee', mb: 2}}>
             {isEditMode ? "Edit Vehicle" : "Add New Vehicle"}
         </DialogTitle>
