@@ -17,7 +17,6 @@ import { mkConfig, generateCsv, download } from 'export-to-csv';
 
 const csvConfigBase = { fieldSeparator: ',', decimalSeparator: '.', useKeysAsHeaders: true };
 
-// FIX: Custom SweetAlert instance to sit ABOVE the MUI Dialog (MUI Dialog z-index is 1300)
 const ModalSwal = Swal.mixin({
   didOpen: () => {
     const container = Swal.getContainer();
@@ -101,7 +100,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
 
   const handleCloseModal = () => setModalOpen(false);
 
-  // FIX: Custom close handler to ignore backdrop clicks and escape keys
   const handleDialogClose = (event, reason) => {
     if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
       return; 
@@ -244,7 +242,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
     { accessorKey: "model", header: "Model" },
     { accessorKey: "year", header: "Year" },
     { accessorKey: "color", header: "Color" },
-    // FIX: Added Status column dynamically checking the owner's status
     {
       id: "status",
       header: "Status",
@@ -280,7 +277,8 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
               sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }} 
               onClick={() => {
                 if (ownerId) {
-                  onNavigateClient({ id: ownerId });
+                  // FIX: Passing ownerId directly instead of an object
+                  onNavigateClient(ownerId);
                 } else {
                   onNavigateClient(row.original.owner_last || "");
                 }
