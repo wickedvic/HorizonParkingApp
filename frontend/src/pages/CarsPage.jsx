@@ -261,7 +261,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       }
     },
     {
-      // FIX: Changed accessorKey to a simple string accessorFn so it safely formats for the global filter string check
       accessorFn: (row) => {
         const first = row.owner_first || "";
         const last = row.owner_last || "";
@@ -270,8 +269,8 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       },
       id: "owner_name",
       header: "Owner",
+      // FIX: Rendered directly to preserve MRT search highlighting instead of calling toString()
       Cell: ({ row, renderedCellValue }) => {
-        const nameStr = renderedCellValue?.toString() || "";
         const ownerId = row.original.owner_id;
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -288,7 +287,7 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
                 }
               }}
             >
-              {nameStr}
+              {renderedCellValue}
             </Link>
           </Box>
         );
