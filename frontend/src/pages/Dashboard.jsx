@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, CSSProperties } from "react"
 import API_BASE_URL from "../api.js"
 import ClientsPage from "./ClientsPage"
 import PermitsPage from "./PermitsPage"
 import CarsPage from "./CarsPage"
+import { BeatLoader } from "react-spinners" // FIX: Imported BeatLoader
 import { 
   Search as SearchIcon,
   Person as PersonIcon,
@@ -27,10 +28,19 @@ import {
 } from "@mui/material"
 import "./Dashboard.css"
 
+// FIX: Added loader styles
+const loaderOverride = {
+  display: "block",
+  margin: "0 auto",
+  textAlign: "center",
+  padding: "40px 0"
+};
+
 export default function Dashboard({ user, onLogout }) {
   const [currentPage, setCurrentPage] = useState("dashboard")
   const [stats, setStats] = useState({ activeClients: 0, activePermits: 0, activeCars: 0 })
   const [globalSearch, setGlobalSearch] = useState("") 
+  const [isLoading, setIsLoading] = useState(true) // FIX: Added loading state
   
   const [rawData, setRawData] = useState({ clients: [], cars: [] })
 
@@ -43,6 +53,7 @@ export default function Dashboard({ user, onLogout }) {
   }, [])
 
   const loadStats = async () => {
+    setIsLoading(true); // START LOADING
     try {
       const [clientsRes, carsRes, permitsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/clients`),
@@ -53,12 +64,10 @@ export default function Dashboard({ user, onLogout }) {
       const cars = await carsRes.json()
       const permits = await permitsRes.json()
 
-      // Calculate Active counts
       const activeClientsCount = Array.isArray(clients) 
         ? clients.filter(c => c.status?.toLowerCase() === 'active').length 
         : 0;
       
-      // Calculate Active Cars (Car owner must be active)
       const activeCarsCount = Array.isArray(cars) && Array.isArray(clients)
         ? cars.filter(car => {
             const owner = clients.find(c => c.id == car.owner_id);
@@ -77,7 +86,11 @@ export default function Dashboard({ user, onLogout }) {
         activePermits: activePermitsCount,
         activeCars: activeCarsCount,
       })
-    } catch (err) { console.error("Stats load failed:", err) }
+    } catch (err) { 
+        console.error("Stats load failed:", err) 
+    } finally {
+        setIsLoading(false); // END LOADING
+    }
   }
 
   const quickSearchResults = useMemo(() => {
@@ -135,7 +148,6 @@ export default function Dashboard({ user, onLogout }) {
     setInitialCarFilter(""); 
     setPermitFilter(""); 
     
-    // FIX: If the user navigates back to the dashboard, refresh the stats
     if (page === "dashboard") {
       loadStats();
     }
@@ -167,31 +179,38 @@ export default function Dashboard({ user, onLogout }) {
             <Paper elevation={0} sx={{ p: '24px', mb: '30px', borderRadius: '16px', border: '1px solid #eef2f6', background: '#fff', position: 'relative', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
                 <Typography variant="h6" sx={{ mb: 3, fontWeight: 700, color: '#1a2027' }}>Quick System Check</Typography>
                 
-                <Stack direction="row" spacing={4} sx={{ mb: 4 }} divider={<Divider orientation="vertical" flexItem />}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(25, 118, 210, 0.08)' }}><PeopleIcon color="primary" /></Box>
-                        <Box>
-                            <Typography variant="h4" sx={{ fontWeight: 800, color: '#1976d2', lineHeight: 1 }}>{stats.activeClients}</Typography>
-                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}>Active Clients</Typography>
-                        </Box>
+                {/* FIX: Show loader if loading, else show stats */}
+                {isLoading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                        <BeatLoader color="#38D6B7" loading={isLoading} cssOverride={loaderOverride} size={15} />
                     </Box>
+                ) : (
+                    <Stack direction="row" spacing={4} sx={{ mb: 4 }} divider={<Divider orientation="vertical" flexItem />}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(25, 118, 210, 0.08)' }}><PeopleIcon color="primary" /></Box>
+                            <Box>
+                                <Typography variant="h4" sx={{ fontWeight: 800, color: '#1976d2', lineHeight: 1 }}>{stats.activeClients}</Typography>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}>Active Clients</Typography>
+                            </Box>
+                        </Box>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(237, 108, 2, 0.08)' }}><CarIcon sx={{ color: '#ed6c02' }} /></Box>
-                        <Box>
-                            <Typography variant="h4" sx={{ fontWeight: 800, color: '#ed6c02', lineHeight: 1 }}>{stats.activeCars}</Typography>
-                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}>Active Vehicles</Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(237, 108, 2, 0.08)' }}><CarIcon sx={{ color: '#ed6c02' }} /></Box>
+                            <Box>
+                                <Typography variant="h4" sx={{ fontWeight: 800, color: '#ed6c02', lineHeight: 1 }}>{stats.activeCars}</Typography>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}>Active Vehicles</Typography>
+                            </Box>
                         </Box>
-                    </Box>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(46, 125, 50, 0.08)' }}><VerifiedIcon color="success" /></Box>
-                        <Box>
-                            <Typography variant="h4" sx={{ fontWeight: 800, color: '#2e7d32', lineHeight: 1 }}>{stats.activePermits}</Typography>
-                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}>Active Temp Permits</Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(46, 125, 50, 0.08)' }}><VerifiedIcon color="success" /></Box>
+                            <Box>
+                                <Typography variant="h4" sx={{ fontWeight: 800, color: '#2e7d32', lineHeight: 1 }}>{stats.activePermits}</Typography>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}>Active Temp Permits</Typography>
+                            </Box>
                         </Box>
-                    </Box>
-                </Stack>
+                    </Stack>
+                )}
 
                 <form onSubmit={handleGlobalSearchSubmit}>
                     <div style={{ position: 'relative' }}>
@@ -213,7 +232,6 @@ export default function Dashboard({ user, onLogout }) {
                                 <>
                                     <Typography variant="overline" sx={{ px: 2, pt: 1, display: 'block', fontWeight: 800, color: 'primary.main' }}>Matching Clients</Typography>
                                     {quickSearchResults.clients.map(c => (
-                                        // FIX: Pass the full name string instead of the ID so the Clients page filter works perfectly
                                         <ListItem key={c.id} button onClick={() => handleNavigateToClients(`${c.firstName} ${c.lastName}`.trim())}>
                                             <ListItemIcon><PersonIcon color="primary" /></ListItemIcon>
                                             <ListItemText primary={`${c.firstName} ${c.lastName}`} secondary={`Permit: ${c.permitNumber || 'None'} | ID: ${c.id}`} />

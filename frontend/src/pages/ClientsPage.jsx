@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
 import Swal from 'sweetalert2';
+import { BeatLoader } from "react-spinners" // FIX: Imported BeatLoader
 import {
   Box, Typography, Chip, List, ListItem, ListItemText, Divider,
   ToggleButton, ToggleButtonGroup, Stack, Grid, Button, Paper, Link, Tooltip,
@@ -35,11 +36,20 @@ const ModalSwal = Swal.mixin({
   }
 });
 
+// FIX: Added loader styles
+const loaderOverride = {
+  display: "block",
+  margin: "0 auto",
+  textAlign: "center",
+  padding: "40px 0"
+};
+
 export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, initialFilter }) {
   const [clients, setClients] = useState([]);
   const [allCars, setAllCars] = useState([]);
   const [payments, setPayments] = useState([]);
   const [statusFilter, setStatusFilter] = useState("active");
+  const [isLoading, setIsLoading] = useState(true); // FIX: Added loading state
   
   const [modalOpen, setModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -56,7 +66,10 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const [columnFilters, setColumnFilters] = useState([]);
 
   useEffect(() => {
-    loadClients(); loadAllCars(); loadPayments();
+    // FIX: Load everything and then disable the loader
+    Promise.all([loadClients(), loadAllCars(), loadPayments()]).finally(() => {
+        setIsLoading(false);
+    });
   }, []);
 
   useEffect(() => {
@@ -400,7 +413,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     }
   };
 
-  // FIX: Combined firstName and lastName into a single "Full Name" column
   const columns = useMemo(() => [
     { accessorKey: "id", header: "ID", size: 80 },
     { 
@@ -435,7 +447,10 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       <MaterialReactTable
         columns={columns}
         data={displayedClients}
-        state={{ globalFilter }}
+        state={{ globalFilter, isLoading }} // FIX: Attached isLoading state
+        muiCircularProgressProps={{
+          Component: <BeatLoader color="#38D6B7" loading={isLoading} cssOverride={loaderOverride} size={15} />
+        }}
         onGlobalFilterChange={setGlobalFilter}
         enableRowActions
         renderTopToolbarCustomActions={() => (

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
 import Swal from 'sweetalert2'; 
+import { BeatLoader } from "react-spinners" // FIX: Imported BeatLoader
 import { 
   Box, Tooltip, IconButton, Typography, Link, Button, 
   Stack, ToggleButton, ToggleButtonGroup, Dialog, DialogTitle, 
@@ -26,11 +27,20 @@ const ModalSwal = Swal.mixin({
   }
 });
 
+// FIX: Added loader styles
+const loaderOverride = {
+  display: "block",
+  margin: "0 auto",
+  textAlign: "center",
+  padding: "40px 0"
+};
+
 export default function CarsPage({ user, onNavigateClient, initialFilter }) {
   const [cars, setCars] = useState([]);
   const [clients, setClients] = useState([]); 
   const [statusFilter, setStatusFilter] = useState("active");
   const [globalFilter, setGlobalFilter] = useState(initialFilter || "");
+  const [isLoading, setIsLoading] = useState(true); // FIX: Added loading state
 
   // MODAL STATES
   const [modalOpen, setModalOpen] = useState(false);
@@ -39,7 +49,13 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
     id: '', license_plate: '', make: '', model: '', year: '', color: '', owner_id: '' 
   });
 
-  useEffect(() => { loadCars(); loadClients(); }, []);
+  useEffect(() => { 
+    // FIX: Load everything and then disable the loader
+    Promise.all([loadCars(), loadClients()]).finally(() => {
+        setIsLoading(false);
+    });
+  }, []);
+
   useEffect(() => { setGlobalFilter(initialFilter || ""); }, [initialFilter]);
 
   const loadCars = async () => {
@@ -278,7 +294,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
               variant="body2" 
               sx={{ fontWeight: 600, textAlign: 'left', textDecoration: 'none' }} 
               onClick={() => {
-                // FIX: Build the full name directly from raw data to pass to the filter
                 const first = row.original.owner_first || "";
                 const last = row.original.owner_last || "";
                 const fullName = `${first} ${last}`.trim();
@@ -286,7 +301,6 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
                 if (fullName) {
                   onNavigateClient(fullName);
                 } else {
-                  // Fallback to ID if no name exists
                   onNavigateClient(row.original.owner_id?.toString() || "");
                 }
               }}
@@ -312,7 +326,10 @@ export default function CarsPage({ user, onNavigateClient, initialFilter }) {
       <MaterialReactTable 
         columns={columns} 
         data={displayedCars} 
-        state={{ globalFilter }} 
+        state={{ globalFilter, isLoading }} // FIX: Attached isLoading state
+        muiCircularProgressProps={{
+          Component: <BeatLoader color="#38D6B7" loading={isLoading} cssOverride={loaderOverride} size={15} />
+        }}
         onGlobalFilterChange={setGlobalFilter}
         enableRowActions={user?.role === 'admin'}
         renderTopToolbarCustomActions={() => (
