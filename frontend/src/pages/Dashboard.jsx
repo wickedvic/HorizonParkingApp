@@ -116,7 +116,6 @@ export default function Dashboard({ user, onLogout }) {
   };
 
   const handleNavigateToClients = (ownerIdOrQuery) => {
-    // FIX: Always pass a string instead of an object to prevent crashing the table filter
     setInitialClientFilter(String(ownerIdOrQuery));
     setInitialCarFilter("");
     setPermitFilter("");
@@ -214,7 +213,8 @@ export default function Dashboard({ user, onLogout }) {
                                 <>
                                     <Typography variant="overline" sx={{ px: 2, pt: 1, display: 'block', fontWeight: 800, color: 'primary.main' }}>Matching Clients</Typography>
                                     {quickSearchResults.clients.map(c => (
-                                        <ListItem key={c.id} button onClick={() => handleNavigateToClients(c.id)}>
+                                        // FIX: Pass the full name string instead of the ID so the Clients page filter works perfectly
+                                        <ListItem key={c.id} button onClick={() => handleNavigateToClients(`${c.firstName} ${c.lastName}`.trim())}>
                                             <ListItemIcon><PersonIcon color="primary" /></ListItemIcon>
                                             <ListItemText primary={`${c.firstName} ${c.lastName}`} secondary={`Permit: ${c.permitNumber || 'None'} | ID: ${c.id}`} />
                                             <Chip label="Client" size="small" variant="outlined" />
@@ -227,7 +227,6 @@ export default function Dashboard({ user, onLogout }) {
                                 <>
                                     <Typography variant="overline" sx={{ px: 2, pt: 1, display: 'block', fontWeight: 800, color: 'warning.main' }}>Matching Vehicles</Typography>
                                     {quickSearchResults.cars.map(car => (
-                                        // FIX: Strip carriage return before passing plate to next screen
                                         <ListItem key={car.id} button onClick={() => handleNavigateToCars(car.license_plate?.split('\r')[0])}>
                                             <ListItemIcon><CarIcon color="warning" /></ListItemIcon>
                                             <ListItemText primary={car.license_plate?.split('\r')[0]} secondary={`${car.make} ${car.model || ''}`} />
