@@ -3,44 +3,43 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Replaced the heavy gray with a much softer, cleaner off-white */
-  background-color: #f4f6f8; 
-  /* Creates a modern split-background: Mint green banner at the top, off-white below */
-  background-image: linear-gradient(to bottom, #a2d2c1 0%, #a2d2c1 35vh, transparent 35vh);
-  background-repeat: no-repeat;
+  /* Reverted to the exact gray background */
+  background: #D6D6D6; 
   padding: 20px;
 }
 
 .login-card {
   background: white;
-  border-radius: 12px; /* Slightly rounder corners for a modern card look */
-  /* A deeper, more diffused multi-layered shadow makes it "float" off the background */
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12), 0 6px 16px rgba(0, 0, 0, 0.06); 
-  padding: 48px 40px; /* Slightly more vertical padding for breathing room */
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1); 
+  
+  /* FIX: Increased padding to make the card taller and more spacious */
+  padding: 60px 50px; 
   width: 100%;
-  max-width: 420px;
-  /* Removed the top border since the card now overlaps the green background band */
+  
+  /* FIX: Increased max-width to make the card wider, leaving less gray on the sides */
+  max-width: 550px; 
+  
+  border-top: 6px solid #a2d2c1; 
 }
 
 .login-card h1 {
   margin-bottom: 10px;
   color: #111; 
   text-align: center;
-  font-weight: 800;
-  letter-spacing: -0.5px; /* Tighter letter spacing for a sleeker heading */
+  font-size: 28px; /* Slightly larger text to match the bigger card */
 }
 
 .subtitle {
   text-align: center;
   color: #666;
-  margin-bottom: 35px;
-  font-size: 15px;
+  margin-bottom: 40px;
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 20px; /* Slightly more space between inputs */
+  gap: 20px; /* Increased gap to spread out the inputs */
 }
 
 .form-group {
@@ -52,93 +51,84 @@
 .form-group label {
   font-weight: 600;
   color: #333;
-  font-size: 14px;
 }
 
 .form-group input {
-  padding: 12px;
+  padding: 12px; /* Thicker inputs for the larger card */
   border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  background-color: #fafafa; /* Very subtle background for inputs */
-  transition: all 0.3s ease;
+  border-radius: 4px;
+  font-size: 15px;
+  transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 .form-group input:focus {
   outline: none;
-  background-color: #ffffff;
   border-color: #a2d2c1; 
-  box-shadow: 0 0 0 3px rgba(162, 210, 193, 0.25);
+  box-shadow: 0 0 0 3px rgba(162, 210, 193, 0.2);
 }
 
 .error {
   color: #d32f2f;
   font-size: 14px;
   background: #ffebee;
-  padding: 12px;
-  border-radius: 6px;
-  text-align: center;
-  font-weight: 500;
+  padding: 10px;
+  border-radius: 4px;
 }
 
 .btn-primary {
   background: #a2d2c1; 
   color: #111; 
-  padding: 14px;
+  padding: 14px; /* Thicker button */
   border: none;
-  border-radius: 6px;
+  border-radius: 4px;
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.3s, transform 0.1s, box-shadow 0.2s;
-  margin-top: 5px;
+  transition: background 0.3s, transform 0.1s;
+  margin-top: 10px;
 }
 
 .btn-primary:hover {
   background: #8fc2af; 
-  box-shadow: 0 4px 12px rgba(162, 210, 193, 0.4); /* Slight glow on hover */
 }
 
 .btn-primary:active {
-  transform: translateY(1px); /* More natural click depression than scale */
+  transform: scale(0.98);
 }
 
 .btn-primary:disabled {
   background: #e0e0e0;
   color: #888;
   cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
 }
 
 .demo-section {
-  margin-top: 35px;
+  margin-top: 40px;
   padding-top: 30px;
   border-top: 1px solid #eee;
 }
 
 .demo-section p {
   text-align: center;
-  color: #888;
+  color: #666;
   font-size: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
-  font-weight: 600;
+  letter-spacing: 1px;
 }
 
 .btn-demo {
   width: 100%;
-  background: #ffffff;
-  color: #444;
-  border: 1px solid #ddd;
+  background: #f9f9f9;
+  color: #333;
+  border: 1px solid #eee;
   padding: 12px;
-  margin-bottom: 10px;
-  border-radius: 6px;
+  margin-bottom: 8px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s;
 }
 
 .btn-demo:hover {
