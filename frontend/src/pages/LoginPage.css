@@ -3,38 +3,44 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Updated to the requested light gray */
-  background: #D6D6D6; 
+  /* Replaced the heavy gray with a much softer, cleaner off-white */
+  background-color: #f4f6f8; 
+  /* Creates a modern split-background: Mint green banner at the top, off-white below */
+  background-image: linear-gradient(to bottom, #a2d2c1 0%, #a2d2c1 35vh, transparent 35vh);
+  background-repeat: no-repeat;
   padding: 20px;
 }
 
 .login-card {
   background: white;
-  border-radius: 8px;
-  /* Softened the shadow to look better on a light background */
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1); 
-  padding: 40px;
+  border-radius: 12px; /* Slightly rounder corners for a modern card look */
+  /* A deeper, more diffused multi-layered shadow makes it "float" off the background */
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12), 0 6px 16px rgba(0, 0, 0, 0.06); 
+  padding: 48px 40px; /* Slightly more vertical padding for breathing room */
   width: 100%;
-  max-width: 400px;
-  border-top: 6px solid #a2d2c1; 
+  max-width: 420px;
+  /* Removed the top border since the card now overlaps the green background band */
 }
 
 .login-card h1 {
   margin-bottom: 10px;
   color: #111; 
   text-align: center;
+  font-weight: 800;
+  letter-spacing: -0.5px; /* Tighter letter spacing for a sleeker heading */
 }
 
 .subtitle {
   text-align: center;
   color: #666;
-  margin-bottom: 30px;
+  margin-bottom: 35px;
+  font-size: 15px;
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px; /* Slightly more space between inputs */
 }
 
 .form-group {
@@ -46,83 +52,93 @@
 .form-group label {
   font-weight: 600;
   color: #333;
+  font-size: 14px;
 }
 
 .form-group input {
-  padding: 10px;
+  padding: 12px;
   border: 1px solid #ddd;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 14px;
-  transition: border-color 0.3s, box-shadow 0.3s;
+  background-color: #fafafa; /* Very subtle background for inputs */
+  transition: all 0.3s ease;
 }
 
 .form-group input:focus {
   outline: none;
+  background-color: #ffffff;
   border-color: #a2d2c1; 
-  box-shadow: 0 0 0 3px rgba(162, 210, 193, 0.2);
+  box-shadow: 0 0 0 3px rgba(162, 210, 193, 0.25);
 }
 
 .error {
   color: #d32f2f;
   font-size: 14px;
   background: #ffebee;
-  padding: 10px;
-  border-radius: 4px;
+  padding: 12px;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 500;
 }
 
 .btn-primary {
   background: #a2d2c1; 
   color: #111; 
-  padding: 12px;
+  padding: 14px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.3s, transform 0.1s;
+  transition: background 0.3s, transform 0.1s, box-shadow 0.2s;
+  margin-top: 5px;
 }
 
 .btn-primary:hover {
   background: #8fc2af; 
+  box-shadow: 0 4px 12px rgba(162, 210, 193, 0.4); /* Slight glow on hover */
 }
 
 .btn-primary:active {
-  transform: scale(0.98);
+  transform: translateY(1px); /* More natural click depression than scale */
 }
 
 .btn-primary:disabled {
   background: #e0e0e0;
   color: #888;
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 .demo-section {
-  margin-top: 30px;
+  margin-top: 35px;
   padding-top: 30px;
   border-top: 1px solid #eee;
 }
 
 .demo-section p {
   text-align: center;
-  color: #666;
+  color: #888;
   font-size: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
+  font-weight: 600;
 }
 
 .btn-demo {
   width: 100%;
-  background: #f9f9f9;
-  color: #333;
-  border: 1px solid #eee;
-  padding: 10px;
-  margin-bottom: 8px;
-  border-radius: 4px;
+  background: #ffffff;
+  color: #444;
+  border: 1px solid #ddd;
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
-  font-weight: 500;
-  transition: all 0.3s;
+  font-weight: 600;
+  transition: all 0.2s ease;
 }
 
 .btn-demo:hover {
