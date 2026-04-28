@@ -132,7 +132,16 @@ export default function Dashboard({ user, onLogout }) {
   }
 
   const navTo = (page) => {
-    setInitialClientFilter(""); setInitialCarFilter(""); setPermitFilter(""); setCurrentPage(page);
+    setInitialClientFilter(""); 
+    setInitialCarFilter(""); 
+    setPermitFilter(""); 
+    
+    // FIX: If the user navigates back to the dashboard, refresh the stats
+    if (page === "dashboard") {
+      loadStats();
+    }
+    
+    setCurrentPage(page);
   }
 
   return (
