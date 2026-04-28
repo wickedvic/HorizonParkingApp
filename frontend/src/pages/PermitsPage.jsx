@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
 import Swal from 'sweetalert2'; 
-import { BeatLoader } from "react-spinners"; // FIX: Imported BeatLoader
+import { BeatLoader } from "react-spinners"; 
 import {
-  Box, Button, Typography, Paper, TextField, Collapse, Stack, Divider, IconButton, Tooltip, Backdrop // FIX: Imported Backdrop
+  Box, Button, Typography, Paper, TextField, Collapse, Stack, IconButton, Tooltip
 } from "@mui/material";
 import { 
   Add as AddIcon, 
@@ -16,7 +16,6 @@ import {
 } from "@mui/icons-material";
 import { MaterialReactTable } from 'material-react-table';
 
-// FIX: Added loader styles
 const loaderOverride = {
   display: "block",
   margin: "0 auto",
@@ -28,7 +27,7 @@ export default function PermitsPage({ user, initialFilter }) {
   const [permits, setPermits] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [globalFilter, setGlobalFilter] = useState(initialFilter || "")
-  const [isLoading, setIsLoading] = useState(true); // FIX: Added loading state
+  const [isLoading, setIsLoading] = useState(true); 
 
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
@@ -45,7 +44,6 @@ export default function PermitsPage({ user, initialFilter }) {
 
   useEffect(() => { setGlobalFilter(initialFilter || ""); }, [initialFilter])
   
-  // FIX: Load permits with a 1-second delay and manage the isLoading state
   useEffect(() => { 
     setIsLoading(true);
     Promise.all([
@@ -116,16 +114,13 @@ export default function PermitsPage({ user, initialFilter }) {
     });
   }
 
-  // Force raw date parsing to avoid UTC to EDT timezone shifting
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     try {
-      // Extract just the YYYY-MM-DD part regardless of string format
       const datePart = typeof dateString === 'string' ? dateString.split("T")[0] : new Date(dateString).toISOString().split("T")[0];
       const [year, month, day] = datePart.split('-');
       if (!year || !month || !day) return "Invalid";
       
-      // Build date in local timezone directly
       const dateObj = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
       return dateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
     } catch (e) {
@@ -221,7 +216,6 @@ export default function PermitsPage({ user, initialFilter }) {
     }
   }
 
-  // Properly handle date overlap rather than just checking the start date
   const filteredPermits = useMemo(() => {
     return permits.filter(p => {
       if (!p.PermitStartDate || !p.PermitEndDate) return false;
@@ -230,8 +224,6 @@ export default function PermitsPage({ user, initialFilter }) {
         const startDate = typeof p.PermitStartDate === 'string' ? p.PermitStartDate.split("T")[0] : new Date(p.PermitStartDate).toISOString().split("T")[0];
         const endDate = typeof p.PermitEndDate === 'string' ? p.PermitEndDate.split("T")[0] : new Date(p.PermitEndDate).toISOString().split("T")[0];
         
-        // A permit is valid in the filter window if its start date is before or equal to the filter end date, 
-        // AND its end date is after or equal to the filter start date. This checks for overlap.
         return startDate <= dateRange.end && endDate >= dateRange.start;
       } catch(e) {
         return false;
@@ -249,19 +241,7 @@ export default function PermitsPage({ user, initialFilter }) {
   ], []);
 
   return (
-    // FIX: Added position relative for the absolute backdrop overlay
     <Box sx={{ p: 3, position: 'relative', minHeight: '400px' }}>
-      <Backdrop
-        sx={{ 
-            position: 'absolute', 
-            zIndex: 1300, 
-            backgroundColor: 'rgba(255, 255, 255, 0.7)' 
-        }}
-        open={isLoading}
-      >
-        <BeatLoader color="#38D6B7" size={15} />
-      </Backdrop>
-
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Daily Parking Permits</Typography>
         
@@ -302,7 +282,7 @@ export default function PermitsPage({ user, initialFilter }) {
       <MaterialReactTable
         columns={columns}
         data={filteredPermits}
-        state={{ globalFilter, isLoading }} // FIX: Attached isLoading state
+        state={{ globalFilter, isLoading }} 
         muiCircularProgressProps={{
           Component: <BeatLoader color="#38D6B7" loading={isLoading} cssOverride={loaderOverride} size={15} />
         }}
@@ -315,7 +295,6 @@ export default function PermitsPage({ user, initialFilter }) {
         renderRowActions={({ row }) => (
           <Box sx={{ display: 'flex', gap: '0.5rem' }}>
             <Tooltip title="Print Permit"><IconButton onClick={() => handlePrintPermit(row.original)} color="primary"><PrintIcon /></IconButton></Tooltip>
-            {/* Standard users cannot delete permits; only admins see this */}
             {user?.role === 'admin' && (
               <Tooltip title="Delete"><IconButton onClick={() => handleDeletePermit(row.original.TempPermitID)} color="error"><DeleteIcon /></IconButton></Tooltip>
             )}
