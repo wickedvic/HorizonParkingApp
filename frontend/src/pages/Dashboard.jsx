@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect, useMemo, CSSProperties } from "react"
+import { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
 import ClientsPage from "./ClientsPage"
 import PermitsPage from "./PermitsPage"
 import CarsPage from "./CarsPage"
-import { BeatLoader } from "react-spinners" // FIX: Imported BeatLoader
+import { BeatLoader } from "react-spinners" 
 import { 
   Search as SearchIcon,
   Person as PersonIcon,
@@ -24,23 +24,16 @@ import {
   ListItemText,
   Divider,
   Chip,
-  Stack
+  Stack,
+  Backdrop // FIX: Imported Backdrop for semi-transparent overlay
 } from "@mui/material"
 import "./Dashboard.css"
-
-// FIX: Added loader styles
-const loaderOverride = {
-  display: "block",
-  margin: "0 auto",
-  textAlign: "center",
-  padding: "40px 0"
-};
 
 export default function Dashboard({ user, onLogout }) {
   const [currentPage, setCurrentPage] = useState("dashboard")
   const [stats, setStats] = useState({ activeClients: 0, activePermits: 0, activeCars: 0 })
   const [globalSearch, setGlobalSearch] = useState("") 
-  const [isLoading, setIsLoading] = useState(true) // FIX: Added loading state
+  const [isLoading, setIsLoading] = useState(true) 
   
   const [rawData, setRawData] = useState({ clients: [], cars: [] })
 
@@ -53,12 +46,14 @@ export default function Dashboard({ user, onLogout }) {
   }, [])
 
   const loadStats = async () => {
-    setIsLoading(true); // START LOADING
+    setIsLoading(true); 
     try {
+      // FIX: Added a 1-second forced delay so the spinner doesn't flash too fast
       const [clientsRes, carsRes, permitsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/clients`),
         fetch(`${API_BASE_URL}/cars`),
         fetch(`${API_BASE_URL}/permits`),
+        new Promise(resolve => setTimeout(resolve, 1000)) 
       ])
       const clients = await clientsRes.json()
       const cars = await carsRes.json()
@@ -89,7 +84,7 @@ export default function Dashboard({ user, onLogout }) {
     } catch (err) { 
         console.error("Stats load failed:", err) 
     } finally {
-        setIsLoading(false); // END LOADING
+        setIsLoading(false); 
     }
   }
 
@@ -177,40 +172,46 @@ export default function Dashboard({ user, onLogout }) {
             <h2 className="page-title">Dashboard Overview</h2>
             
             <Paper elevation={0} sx={{ p: '24px', mb: '30px', borderRadius: '16px', border: '1px solid #eef2f6', background: '#fff', position: 'relative', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+                {/* FIX: Backdrop overlay added directly over the Paper content */}
+                <Backdrop
+                  sx={{ 
+                    position: 'absolute', 
+                    zIndex: 10, 
+                    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                    borderRadius: 'inherit'
+                  }}
+                  open={isLoading}
+                >
+                  <BeatLoader color="#38D6B7" size={15} />
+                </Backdrop>
+
                 <Typography variant="h6" sx={{ mb: 3, fontWeight: 700, color: '#1a2027' }}>Quick System Check</Typography>
                 
-                {/* FIX: Show loader if loading, else show stats */}
-                {isLoading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                        <BeatLoader color="#38D6B7" loading={isLoading} cssOverride={loaderOverride} size={15} />
+                <Stack direction="row" spacing={4} sx={{ mb: 4 }} divider={<Divider orientation="vertical" flexItem />}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(25, 118, 210, 0.08)' }}><PeopleIcon color="primary" /></Box>
+                        <Box>
+                            <Typography variant="h4" sx={{ fontWeight: 800, color: '#1976d2', lineHeight: 1 }}>{stats.activeClients}</Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}>Active Clients</Typography>
+                        </Box>
                     </Box>
-                ) : (
-                    <Stack direction="row" spacing={4} sx={{ mb: 4 }} divider={<Divider orientation="vertical" flexItem />}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(25, 118, 210, 0.08)' }}><PeopleIcon color="primary" /></Box>
-                            <Box>
-                                <Typography variant="h4" sx={{ fontWeight: 800, color: '#1976d2', lineHeight: 1 }}>{stats.activeClients}</Typography>
-                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}>Active Clients</Typography>
-                            </Box>
-                        </Box>
 
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(237, 108, 2, 0.08)' }}><CarIcon sx={{ color: '#ed6c02' }} /></Box>
-                            <Box>
-                                <Typography variant="h4" sx={{ fontWeight: 800, color: '#ed6c02', lineHeight: 1 }}>{stats.activeCars}</Typography>
-                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}>Active Vehicles</Typography>
-                            </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(237, 108, 2, 0.08)' }}><CarIcon sx={{ color: '#ed6c02' }} /></Box>
+                        <Box>
+                            <Typography variant="h4" sx={{ fontWeight: 800, color: '#ed6c02', lineHeight: 1 }}>{stats.activeCars}</Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}>Active Vehicles</Typography>
                         </Box>
+                    </Box>
 
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(46, 125, 50, 0.08)' }}><VerifiedIcon color="success" /></Box>
-                            <Box>
-                                <Typography variant="h4" sx={{ fontWeight: 800, color: '#2e7d32', lineHeight: 1 }}>{stats.activePermits}</Typography>
-                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}>Active Temp Permits</Typography>
-                            </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(46, 125, 50, 0.08)' }}><VerifiedIcon color="success" /></Box>
+                        <Box>
+                            <Typography variant="h4" sx={{ fontWeight: 800, color: '#2e7d32', lineHeight: 1 }}>{stats.activePermits}</Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}>Active Temp Permits</Typography>
                         </Box>
-                    </Stack>
-                )}
+                    </Box>
+                </Stack>
 
                 <form onSubmit={handleGlobalSearchSubmit}>
                     <div style={{ position: 'relative' }}>

@@ -3,12 +3,13 @@
 import React, { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
 import Swal from 'sweetalert2';
-import { BeatLoader } from "react-spinners" // FIX: Imported BeatLoader
+import { BeatLoader } from "react-spinners" 
 import {
   Box, Typography, Chip, List, ListItem, ListItemText, Divider,
   ToggleButton, ToggleButtonGroup, Stack, Grid, Button, Paper, Link, Tooltip,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem,
-  Autocomplete 
+  Autocomplete,
+  Backdrop // FIX: Imported Backdrop
 } from "@mui/material";
 import { 
   DirectionsCar as CarIcon, 
@@ -36,20 +37,12 @@ const ModalSwal = Swal.mixin({
   }
 });
 
-// FIX: Added loader styles
-const loaderOverride = {
-  display: "block",
-  margin: "0 auto",
-  textAlign: "center",
-  padding: "40px 0"
-};
-
 export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, initialFilter }) {
   const [clients, setClients] = useState([]);
   const [allCars, setAllCars] = useState([]);
   const [payments, setPayments] = useState([]);
   const [statusFilter, setStatusFilter] = useState("active");
-  const [isLoading, setIsLoading] = useState(true); // FIX: Added loading state
+  const [isLoading, setIsLoading] = useState(true); 
   
   const [modalOpen, setModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -66,8 +59,14 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const [columnFilters, setColumnFilters] = useState([]);
 
   useEffect(() => {
-    // FIX: Load everything and then disable the loader
-    Promise.all([loadClients(), loadAllCars(), loadPayments()]).finally(() => {
+    setIsLoading(true);
+    // FIX: Included 1-second delay
+    Promise.all([
+      loadClients(), 
+      loadAllCars(), 
+      loadPayments(),
+      new Promise(resolve => setTimeout(resolve, 1000))
+    ]).finally(() => {
         setIsLoading(false);
     });
   }, []);
@@ -432,7 +431,19 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   }, [clients, statusFilter, globalFilter]);
 
   return (
-    <Box sx={{ p: 3 }}>
+    // FIX: Position relative on the main container so the absolute backdrop perfectly bounds the active view
+    <Box sx={{ p: 3, position: 'relative', minHeight: '400px' }}>
+      <Backdrop
+        sx={{ 
+            position: 'absolute', 
+            zIndex: 1300, 
+            backgroundColor: 'rgba(255, 255, 255, 0.7)' 
+        }}
+        open={isLoading}
+      >
+        <BeatLoader color="#38D6B7" size={15} />
+      </Backdrop>
+
       <Stack direction="row" justifyContent="space-between" sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Client Directory</Typography>
         <Stack direction="row" spacing={2}>
@@ -447,10 +458,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       <MaterialReactTable
         columns={columns}
         data={displayedClients}
-        state={{ globalFilter, isLoading }} // FIX: Attached isLoading state
-        muiCircularProgressProps={{
-          Component: <BeatLoader color="#38D6B7" loading={isLoading} cssOverride={loaderOverride} size={15} />
-        }}
+        state={{ globalFilter }}
         onGlobalFilterChange={setGlobalFilter}
         enableRowActions
         renderTopToolbarCustomActions={() => (
