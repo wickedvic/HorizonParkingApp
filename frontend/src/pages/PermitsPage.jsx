@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useMemo } from "react"
 import API_BASE_URL from "../api.js"
-import Swal from 'sweetalert2'; // FIX: Imported SweetAlert2
+import Swal from 'sweetalert2'; 
+import { BeatLoader } from "react-spinners"; // FIX: Imported BeatLoader
 import {
-  Box, Button, Typography, Paper, TextField, Collapse, Stack, Divider, IconButton, Tooltip
+  Box, Button, Typography, Paper, TextField, Collapse, Stack, Divider, IconButton, Tooltip, Backdrop // FIX: Imported Backdrop
 } from "@mui/material";
 import { 
   Add as AddIcon, 
@@ -15,10 +16,19 @@ import {
 } from "@mui/icons-material";
 import { MaterialReactTable } from 'material-react-table';
 
+// FIX: Added loader styles
+const loaderOverride = {
+  display: "block",
+  margin: "0 auto",
+  textAlign: "center",
+  padding: "40px 0"
+};
+
 export default function PermitsPage({ user, initialFilter }) {
   const [permits, setPermits] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [globalFilter, setGlobalFilter] = useState(initialFilter || "")
+  const [isLoading, setIsLoading] = useState(true); // FIX: Added loading state
 
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
@@ -34,7 +44,17 @@ export default function PermitsPage({ user, initialFilter }) {
   })
 
   useEffect(() => { setGlobalFilter(initialFilter || ""); }, [initialFilter])
-  useEffect(() => { loadPermits() }, [])
+  
+  // FIX: Load permits with a 1-second delay and manage the isLoading state
+  useEffect(() => { 
+    setIsLoading(true);
+    Promise.all([
+      loadPermits(),
+      new Promise(resolve => setTimeout(resolve, 1000))
+    ]).finally(() => {
+      setIsLoading(false);
+    });
+  }, [])
 
   const loadPermits = async () => {
     try {
@@ -229,7 +249,19 @@ export default function PermitsPage({ user, initialFilter }) {
   ], []);
 
   return (
-    <Box sx={{ p: 3 }}>
+    // FIX: Added position relative for the absolute backdrop overlay
+    <Box sx={{ p: 3, position: 'relative', minHeight: '400px' }}>
+      <Backdrop
+        sx={{ 
+            position: 'absolute', 
+            zIndex: 1300, 
+            backgroundColor: 'rgba(255, 255, 255, 0.7)' 
+        }}
+        open={isLoading}
+      >
+        <BeatLoader color="#38D6B7" size={15} />
+      </Backdrop>
+
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Daily Parking Permits</Typography>
         
@@ -270,7 +302,10 @@ export default function PermitsPage({ user, initialFilter }) {
       <MaterialReactTable
         columns={columns}
         data={filteredPermits}
-        state={{ globalFilter }}
+        state={{ globalFilter, isLoading }} // FIX: Attached isLoading state
+        muiCircularProgressProps={{
+          Component: <BeatLoader color="#38D6B7" loading={isLoading} cssOverride={loaderOverride} size={15} />
+        }}
         onGlobalFilterChange={setGlobalFilter}
         enableRowActions
         initialState={{ 
