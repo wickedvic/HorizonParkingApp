@@ -9,7 +9,6 @@ import {
   ToggleButton, ToggleButtonGroup, Stack, Grid, Button, Paper, Link, Tooltip,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem,
   Autocomplete,
-  Backdrop // FIX: Imported Backdrop
 } from "@mui/material";
 import { 
   DirectionsCar as CarIcon, 
@@ -60,7 +59,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
 
   useEffect(() => {
     setIsLoading(true);
-    // FIX: Included 1-second delay
     Promise.all([
       loadClients(), 
       loadAllCars(), 
@@ -154,10 +152,43 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     const clientVehicles = allCars.filter(car => car.owner_id == client.id);
     const monthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
     const printWindow = window.open('', '_blank');
+    
+    // FIX: Updated HTML to use the Horizon_HHS_Logos.jpg image instead of the generic "H" box
     printWindow.document.write(`
       <html>
-        <head><title>Parking Permit - ${client.lastName}</title><style>body { font-family: Arial; padding: 40px; text-align: center; }.header { border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; }.logo { background: #444; color: white; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-weight: bold; }h1 { font-size: 48px; color: #d32f2f; margin: 20px 0; }.address { font-size: 18px; margin-bottom: 30px; }.permit-label { font-size: 32px; font-weight: bold; text-decoration: underline; }.date-highlight { font-size: 56px; color: #d32f2f; font-weight: bold; margin: 20px 0; }table { width: 100%; border-collapse: collapse; margin-top: 10px; }th, td { border: 1px solid black; padding: 8px; text-align: left; }.signature { margin-top: 60px; text-align: right; font-size: 20px; color: #d32f2f; }</style></head>
-        <body><div class="header"><div class="logo">H</div><div style="font-size: 28px; font-weight: bold;">2020 Partners, LLC</div></div><h1>Parking Permit</h1><div class="address">20 Jerusalem Ave<br/>Hicksville, NY</div><div class="permit-label">Permit #: ${client.permitNumber || ''}</div><div class="date-highlight">${monthYear}</div><div style="text-align:left; font-weight:bold; text-decoration:underline;">Cars Info</div><table><thead><tr><th>Car Make</th><th>Model</th><th>Color</th><th>Year</th><th>License</th></tr></thead><tbody>${clientVehicles.map(car => `<tr><td>${car.make}</td><td>${car.model}</td><td>${car.color}</td><td>${car.year}</td><td>${car.license_plate?.split('\r')[0]}</td></tr>`).join('')}</tbody></table><div class="signature">X __________________________________________</div><script>window.print();</script></body></html>
+        <head>
+            <title>Parking Permit - ${client.lastName}</title>
+            <style>
+                body { font-family: Arial; padding: 40px; text-align: center; }
+                .header { border-bottom: 2px solid black; padding-bottom: 15px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 20px; }
+                .logo-img { height: 60px; object-fit: contain; }
+                h1 { font-size: 48px; color: #d32f2f; margin: 20px 0; }
+                .address { font-size: 18px; margin-bottom: 30px; }
+                .permit-label { font-size: 32px; font-weight: bold; text-decoration: underline; }
+                .date-highlight { font-size: 56px; color: #d32f2f; font-weight: bold; margin: 20px 0; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                th, td { border: 1px solid black; padding: 8px; text-align: left; }
+                .signature { margin-top: 60px; text-align: right; font-size: 20px; color: #d32f2f; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <img src="${window.location.origin}/Horizon_HHS_Logos.jpg" class="logo-img" alt="Horizon Logo" />
+                <div style="font-size: 28px; font-weight: bold;">2020 Partners, LLC</div>
+            </div>
+            <h1>Parking Permit</h1>
+            <div class="address">20 Jerusalem Ave<br/>Hicksville, NY</div>
+            <div class="permit-label">Permit #: ${client.permitNumber || ''}</div>
+            <div class="date-highlight">${monthYear}</div>
+            <div style="text-align:left; font-weight:bold; text-decoration:underline;">Cars Info</div>
+            <table>
+                <thead><tr><th>Car Make</th><th>Model</th><th>Color</th><th>Year</th><th>License</th></tr></thead>
+                <tbody>${clientVehicles.map(car => `<tr><td>${car.make}</td><td>${car.model}</td><td>${car.color}</td><td>${car.year}</td><td>${car.license_plate?.split('\r')[0]}</td></tr>`).join('')}</tbody>
+            </table>
+            <div class="signature">X __________________________________________</div>
+            <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); }</script>
+        </body>
+      </html>
     `);
     printWindow.document.close();
   };
@@ -167,9 +198,39 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     const selectedMonth = window.prompt("Enter the Effective Month/Year for this receipt:", defaultMonth);
     if (selectedMonth === null) return; 
     const printWindow = window.open('', '_blank');
+    
+    // FIX: Updated HTML to use the Horizon_HHS_Logos.jpg image instead of the generic "H" box
     printWindow.document.write(`
-      <html><head><title>Payment Receipt - ${client.lastName}</title><style>body { font-family: Arial; padding: 50px; text-align: center; }.receipt-box { border: 1px solid black; padding: 40px; margin: 20px auto; width: 450px; text-align: left; }.header { display: flex; align-items: center; justify-content: center; margin-bottom: 5px; }.logo { background: #444; color: white; width: 40px; height: 40px; line-height: 40px; margin-right: 10px; font-weight: bold; text-align: center;}.title { font-size: 22px; font-weight: bold; border-bottom: 1px solid black; display: inline-block; margin-bottom: 30px; }.row { margin: 15px 0; font-size: 16px; display: flex; justify-content: space-between; }.value { text-decoration: underline; }.footer { margin-top: 100px; font-size: 12px; }</style></head>
-      <body><div class="header"><div class="logo">H</div><div style="font-size: 20px;">20/20 Partners</div></div><div class="title">Parking Payment Receipt</div><div class="receipt-box"><div class="row"><span>Client Name:</span> <span class="value">${client.lastName}, ${client.firstName}</span></div><div class="row"><span>Permit #:</span> <span class="value">${client.permitNumber || ''}</span></div><div class="row"><span>Paid:</span> <span class="value">$${client.feeCharged || '0'}.00</span></div><div class="row"><span>Effective Month:</span> <span class="value">${selectedMonth}</span></div></div><div class="footer">Printed on: ${new Date().toLocaleString()}</div><script>window.print();</script></body></html>
+      <html>
+        <head>
+            <title>Payment Receipt - ${client.lastName}</title>
+            <style>
+                body { font-family: Arial; padding: 50px; text-align: center; }
+                .receipt-box { border: 1px solid black; padding: 40px; margin: 20px auto; width: 450px; text-align: left; }
+                .header { display: flex; align-items: center; justify-content: center; margin-bottom: 10px; gap: 15px; }
+                .logo-img { height: 45px; object-fit: contain; }
+                .title { font-size: 22px; font-weight: bold; border-bottom: 1px solid black; display: inline-block; margin-bottom: 30px; padding-bottom: 5px;}
+                .row { margin: 15px 0; font-size: 16px; display: flex; justify-content: space-between; }
+                .value { text-decoration: underline; }
+                .footer { margin-top: 100px; font-size: 12px; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <img src="${window.location.origin}/Horizon_HHS_Logos.jpg" class="logo-img" alt="Horizon Logo" />
+                <div style="font-size: 20px; font-weight: bold;">20/20 Partners</div>
+            </div>
+            <div class="title">Parking Payment Receipt</div>
+            <div class="receipt-box">
+                <div class="row"><span>Client Name:</span> <span class="value">${client.lastName}, ${client.firstName}</span></div>
+                <div class="row"><span>Permit #:</span> <span class="value">${client.permitNumber || ''}</span></div>
+                <div class="row"><span>Paid:</span> <span class="value">$${client.feeCharged || '0'}.00</span></div>
+                <div class="row"><span>Effective Month:</span> <span class="value">${selectedMonth}</span></div>
+            </div>
+            <div class="footer">Printed on: ${new Date().toLocaleString()}</div>
+            <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); }</script>
+        </body>
+      </html>
     `);
     printWindow.document.close();
   };
@@ -180,6 +241,8 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     const leftCol = clientPayments.slice(0, mid);
     const rightCol = clientPayments.slice(mid);
     const printWindow = window.open('', '_blank');
+    
+    // FIX: Updated HTML to use the Horizon_HHS_Logos.jpg image instead of the generic "H" box
     printWindow.document.write(`
       <html>
         <head>
@@ -189,7 +252,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
             body { font-family: Arial, sans-serif; padding: 15px; margin: 0; font-size: 11px; }
             .title-box { border: 1px solid black; width: 180px; margin: 0 auto 15px auto; text-align: center; font-weight: bold; padding: 4px; font-size: 14px; }
             .header-info { border: 1px solid black; padding: 8px; display: flex; justify-content: space-between; margin-bottom: 15px; }
-            .logo-small { background: #444; color: white; width: 25px; text-align: center; margin-bottom: 4px; font-weight: bold; }
+            .logo-img { height: 35px; object-fit: contain; margin-bottom: 8px; display: block; }
             .flex-container { display: flex; gap: 15px; align-items: flex-start; }
             table { width: 100%; border-collapse: collapse; }
             th, td { border: 1px solid black; padding: 4px; text-align: left; }
@@ -199,7 +262,11 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         <body>
           <div class="title-box">Payment History</div>
           <div class="header-info">
-            <div><div class="logo-small">H</div><strong>${client.lastName}, ${client.firstName}</strong><br/>Client Type: ${client.type || 'Payer'}</div>
+            <div>
+                <img src="${window.location.origin}/Horizon_HHS_Logos.jpg" class="logo-img" alt="Horizon Logo" />
+                <strong>${client.lastName}, ${client.firstName}</strong><br/>
+                Client Type: ${client.type || 'Payer'}
+            </div>
             <div style="text-align:right;">Method of Payment: Credit Card<br/>Monthly Fee: $${client.feeCharged || '0'}.00</div>
           </div>
           <div class="flex-container">
@@ -215,7 +282,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
             </div>
           </div>
           <div style="font-size: 9px; margin-top: 10px; color: #666;">Printed on: ${new Date().toLocaleString()}</div>
-          <script>window.print();</script>
+          <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); }</script>
         </body>
       </html>
     `);
@@ -431,19 +498,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   }, [clients, statusFilter, globalFilter]);
 
   return (
-    // FIX: Position relative on the main container so the absolute backdrop perfectly bounds the active view
     <Box sx={{ p: 3, position: 'relative', minHeight: '400px' }}>
-      <Backdrop
-        sx={{ 
-            position: 'absolute', 
-            zIndex: 1300, 
-            backgroundColor: 'rgba(255, 255, 255, 0.7)' 
-        }}
-        open={isLoading}
-      >
-        <BeatLoader color="#38D6B7" size={15} />
-      </Backdrop>
-
       <Stack direction="row" justifyContent="space-between" sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Client Directory</Typography>
         <Stack direction="row" spacing={2}>

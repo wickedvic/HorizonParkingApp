@@ -132,14 +132,16 @@ export default function PermitsPage({ user, initialFilter }) {
     const rangeHeader = `${formatDate(permit.PermitStartDate)} - ${formatDate(permit.PermitEndDate)}`;
     
     const printWindow = window.open('', '_blank');
+    
+    // FIX: Updated HTML to use the Horizon_HHS_Logos.jpg image instead of the generic "H" box
     printWindow.document.write(`
       <html>
         <head>
           <title>Parking Permit - ${permit.UserName}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 40px; text-align: center; }
-            .header { border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; }
-            .logo { background: #444; color: white; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-weight: bold; font-size: 24px; }
+            .header { border-bottom: 2px solid black; padding-bottom: 15px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 20px; }
+            .logo-img { height: 60px; object-fit: contain; }
             h1 { font-size: 72px; color: #d32f2f; margin: 20px 0; font-weight: bold; }
             .address { font-size: 22px; margin-bottom: 30px; font-weight: bold; }
             .permit-label { font-size: 40px; font-weight: bold; text-decoration: underline; }
@@ -149,7 +151,10 @@ export default function PermitsPage({ user, initialFilter }) {
           </style>
         </head>
         <body>
-          <div class="header"><div class="logo">H</div><div style="font-size: 32px; font-weight: bold;">2020 Partners, LLC</div></div>
+          <div class="header">
+            <img src="${window.location.origin}/Horizon_HHS_Logos.jpg" class="logo-img" alt="Horizon Logo" />
+            <div style="font-size: 32px; font-weight: bold;">2020 Partners, LLC</div>
+          </div>
           <h1>Parking Permit</h1>
           <div class="address">20 Jerusalem Ave<br/>Hicksville, NY</div>
           <div class="permit-label">Permit #: ${permit.PermitDate || 'TEMP'}</div>
@@ -159,7 +164,7 @@ export default function PermitsPage({ user, initialFilter }) {
           </div>
           <div class="signature">X __________________________________________</div>
           <div class="footer-info">Feel Free to call with any questions: Phone: 516-328-2020</div>
-          <script>window.print();</script>
+          <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); }</script>
         </body>
       </html>
     `);
