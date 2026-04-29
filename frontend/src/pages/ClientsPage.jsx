@@ -9,6 +9,7 @@ import {
   ToggleButton, ToggleButtonGroup, Stack, Grid, Button, Paper, Link, Tooltip,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem,
   Autocomplete,
+  Backdrop
 } from "@mui/material";
 import { 
   DirectionsCar as CarIcon, 
@@ -47,7 +48,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({ firstName: '', lastName: '', type: 'tenant', status: 'active', permitNumber: '', feeCharged: '0', id: null });
 
-  // --- NEW MULTI-STEP FLOW STATES ---
   const [flowMode, setFlowMode] = useState('client-only'); 
   const [flowStep, setFlowStep] = useState(1); 
   const [newlyCreatedClientId, setNewlyCreatedClientId] = useState(null);
@@ -55,7 +55,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const [carFormData, setCarFormData] = useState({ license_plate: '', make: '', model: '', year: '', color: '', existing_car_id: '' });
 
   const [globalFilter, setGlobalFilter] = useState(initialFilter || "");
-  const [columnFilters, setColumnFilters] = useState([]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -153,15 +152,15 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     const monthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
     const printWindow = window.open('', '_blank');
     
-    // FIX: Updated HTML to use the Horizon_HHS_Logos.jpg image instead of the generic "H" box
+    // FIX: Updated to HHLogo.png and adjusted CSS sizing
     printWindow.document.write(`
       <html>
         <head>
             <title>Parking Permit - ${client.lastName}</title>
             <style>
                 body { font-family: Arial; padding: 40px; text-align: center; }
-                .header { border-bottom: 2px solid black; padding-bottom: 15px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 20px; }
-                .logo-img { height: 60px; object-fit: contain; }
+                .header { border-bottom: 2px solid black; padding-bottom: 15px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; }
+                .logo-img { height: 50px; width: 50px; object-fit: contain; margin-right: 15px; border-radius: 4px; }
                 h1 { font-size: 48px; color: #d32f2f; margin: 20px 0; }
                 .address { font-size: 18px; margin-bottom: 30px; }
                 .permit-label { font-size: 32px; font-weight: bold; text-decoration: underline; }
@@ -173,7 +172,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         </head>
         <body>
             <div class="header">
-                <img src="${window.location.origin}/Horizon_HHS_Logos.jpg" class="logo-img" alt="Horizon Logo" />
+                <img src="${window.location.origin}/HHLogo.png" class="logo-img" alt="Horizon Logo" />
                 <div style="font-size: 28px; font-weight: bold;">2020 Partners, LLC</div>
             </div>
             <h1>Parking Permit</h1>
@@ -186,7 +185,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
                 <tbody>${clientVehicles.map(car => `<tr><td>${car.make}</td><td>${car.model}</td><td>${car.color}</td><td>${car.year}</td><td>${car.license_plate?.split('\r')[0]}</td></tr>`).join('')}</tbody>
             </table>
             <div class="signature">X __________________________________________</div>
-            <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); }</script>
+            <script>setTimeout(function() { window.print(); }, 750);</script>
         </body>
       </html>
     `);
@@ -199,7 +198,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     if (selectedMonth === null) return; 
     const printWindow = window.open('', '_blank');
     
-    // FIX: Updated HTML to use the Horizon_HHS_Logos.jpg image instead of the generic "H" box
+    // FIX: Updated to HHLogo.png and adjusted CSS sizing
     printWindow.document.write(`
       <html>
         <head>
@@ -207,8 +206,8 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
             <style>
                 body { font-family: Arial; padding: 50px; text-align: center; }
                 .receipt-box { border: 1px solid black; padding: 40px; margin: 20px auto; width: 450px; text-align: left; }
-                .header { display: flex; align-items: center; justify-content: center; margin-bottom: 10px; gap: 15px; }
-                .logo-img { height: 45px; object-fit: contain; }
+                .header { display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+                .logo-img { height: 40px; width: 40px; object-fit: contain; margin-right: 10px; border-radius: 4px; }
                 .title { font-size: 22px; font-weight: bold; border-bottom: 1px solid black; display: inline-block; margin-bottom: 30px; padding-bottom: 5px;}
                 .row { margin: 15px 0; font-size: 16px; display: flex; justify-content: space-between; }
                 .value { text-decoration: underline; }
@@ -217,7 +216,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         </head>
         <body>
             <div class="header">
-                <img src="${window.location.origin}/Horizon_HHS_Logos.jpg" class="logo-img" alt="Horizon Logo" />
+                <img src="${window.location.origin}/HHLogo.png" class="logo-img" alt="Horizon Logo" />
                 <div style="font-size: 20px; font-weight: bold;">20/20 Partners</div>
             </div>
             <div class="title">Parking Payment Receipt</div>
@@ -228,7 +227,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
                 <div class="row"><span>Effective Month:</span> <span class="value">${selectedMonth}</span></div>
             </div>
             <div class="footer">Printed on: ${new Date().toLocaleString()}</div>
-            <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); }</script>
+            <script>setTimeout(function() { window.print(); }, 750);</script>
         </body>
       </html>
     `);
@@ -242,7 +241,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     const rightCol = clientPayments.slice(mid);
     const printWindow = window.open('', '_blank');
     
-    // FIX: Updated HTML to use the Horizon_HHS_Logos.jpg image instead of the generic "H" box
+    // FIX: Updated to HHLogo.png and adjusted CSS sizing
     printWindow.document.write(`
       <html>
         <head>
@@ -252,7 +251,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
             body { font-family: Arial, sans-serif; padding: 15px; margin: 0; font-size: 11px; }
             .title-box { border: 1px solid black; width: 180px; margin: 0 auto 15px auto; text-align: center; font-weight: bold; padding: 4px; font-size: 14px; }
             .header-info { border: 1px solid black; padding: 8px; display: flex; justify-content: space-between; margin-bottom: 15px; }
-            .logo-img { height: 35px; object-fit: contain; margin-bottom: 8px; display: block; }
+            .logo-img { height: 35px; width: 35px; object-fit: contain; margin-bottom: 8px; display: block; border-radius: 4px; }
             .flex-container { display: flex; gap: 15px; align-items: flex-start; }
             table { width: 100%; border-collapse: collapse; }
             th, td { border: 1px solid black; padding: 4px; text-align: left; }
@@ -263,7 +262,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
           <div class="title-box">Payment History</div>
           <div class="header-info">
             <div>
-                <img src="${window.location.origin}/Horizon_HHS_Logos.jpg" class="logo-img" alt="Horizon Logo" />
+                <img src="${window.location.origin}/HHLogo.png" class="logo-img" alt="Horizon Logo" />
                 <strong>${client.lastName}, ${client.firstName}</strong><br/>
                 Client Type: ${client.type || 'Payer'}
             </div>
@@ -282,7 +281,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
             </div>
           </div>
           <div style="font-size: 9px; margin-top: 10px; color: #666;">Printed on: ${new Date().toLocaleString()}</div>
-          <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); }</script>
+          <script>setTimeout(function() { window.print(); }, 750);</script>
         </body>
       </html>
     `);
@@ -499,6 +498,17 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
 
   return (
     <Box sx={{ p: 3, position: 'relative', minHeight: '400px' }}>
+      <Backdrop
+        sx={{ 
+            position: 'absolute', 
+            zIndex: 1300, 
+            backgroundColor: 'rgba(255, 255, 255, 0.7)' 
+        }}
+        open={isLoading}
+      >
+        <BeatLoader color="#38D6B7" size={15} />
+      </Backdrop>
+
       <Stack direction="row" justifyContent="space-between" sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Client Directory</Typography>
         <Stack direction="row" spacing={2}>
