@@ -25,7 +25,7 @@ import {
   Divider,
   Chip,
   Stack,
-  Backdrop // FIX: Imported Backdrop for semi-transparent overlay
+  Backdrop
 } from "@mui/material"
 import "./Dashboard.css"
 
@@ -48,7 +48,6 @@ export default function Dashboard({ user, onLogout }) {
   const loadStats = async () => {
     setIsLoading(true); 
     try {
-      // FIX: Added a 1-second forced delay so the spinner doesn't flash too fast
       const [clientsRes, carsRes, permitsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/clients`),
         fetch(`${API_BASE_URL}/cars`),
@@ -153,7 +152,17 @@ export default function Dashboard({ user, onLogout }) {
   return (
     <div className="dashboard">
       <aside className="dashboard-sidebar">
-        <div className="sidebar-brand"><h1>🚗 Horizon Parking</h1></div>
+        <div className="sidebar-brand">
+          <h1>
+            {/* FIX: Replaced emoji with the imported image. Make sure HHLogo.png is in your public folder! */}
+            <img 
+              src="/HHLogo.png" 
+              alt="Horizon Logo" 
+              style={{ width: '32px', height: '32px', verticalAlign: 'middle', marginRight: '10px', borderRadius: '4px' }} 
+            />
+            Horizon Parking
+          </h1>
+        </div>
         <nav className="sidebar-nav">
           <button className={`nav-btn ${currentPage === "dashboard" ? "active" : ""}`} onClick={() => navTo("dashboard")}>📊 Dashboard</button>
           <button className={`nav-btn ${currentPage === "clients" ? "active" : ""}`} onClick={() => navTo("clients")}>👥 Clients</button>
@@ -172,7 +181,6 @@ export default function Dashboard({ user, onLogout }) {
             <h2 className="page-title">Dashboard Overview</h2>
             
             <Paper elevation={0} sx={{ p: '24px', mb: '30px', borderRadius: '16px', border: '1px solid #eef2f6', background: '#fff', position: 'relative', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
-                {/* FIX: Backdrop overlay added directly over the Paper content */}
                 <Backdrop
                   sx={{ 
                     position: 'absolute', 
