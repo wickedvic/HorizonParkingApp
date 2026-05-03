@@ -37,7 +37,6 @@ const ModalSwal = Swal.mixin({
   }
 });
 
-// FIX: Added a mapping dictionary for the UI display of Client Types
 const clientTypeDisplayMap = {
   'tenant': 'Bank of America',
   'employee': 'Horizon',
@@ -51,16 +50,20 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const [statusFilter, setStatusFilter] = useState("active");
   const [isLoading, setIsLoading] = useState(true); 
   
+  // --- CLIENT MODAL STATES ---
   const [modalOpen, setModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({ firstName: '', lastName: '', type: 'tenant', status: 'active', permitNumber: '', feeCharged: '0', id: null });
-
-  // --- NEW MULTI-STEP FLOW STATES ---
   const [flowMode, setFlowMode] = useState('client-only'); 
   const [flowStep, setFlowStep] = useState(1); 
   const [newlyCreatedClientId, setNewlyCreatedClientId] = useState(null);
   const [carFlowType, setCarFlowType] = useState('new'); 
   const [carFormData, setCarFormData] = useState({ license_plate: '', make: '', model: '', year: '', color: '', existing_car_id: '' });
+
+  // --- CAR INLINE MODAL STATES ---
+  const [inlineCarModalOpen, setInlineCarModalOpen] = useState(false);
+  const [isInlineCarEditMode, setIsInlineCarEditMode] = useState(false);
+  const [inlineCarFormData, setInlineCarFormData] = useState({ id: '', license_plate: '', make: '', model: '', year: '', color: '', owner_id: '' });
 
   const [globalFilter, setGlobalFilter] = useState(initialFilter || "");
 
@@ -87,14 +90,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       const res = await fetch(`${API_BASE_URL}/clients`);
       const data = await res.json();
       setClients(Array.isArray(data) ? data.filter(row => row.id) : []);
-    } catch (err) { 
-      console.error(err); 
-      Swal.fire({
-        icon: "error",
-        title: "Oops...",
-        text: "Something went wrong loading clients! Please try again in a few minutes.",
-      });
-    }
+    } catch (err) { console.error(err); }
   };
 
   const loadAllCars = async () => {
@@ -136,11 +132,93 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
           console.error("Error deleting client:", err); 
           Swal.fire({ icon: "error", title: "Oops...", text: "Something went wrong! Please try again in a few minutes." });
         }
-      } else if (result.isDismissed) {
-        Swal.fire("Cancelled", "Changes were not saved.", "info");
       }
     });
   };
+
+  // --- NEW: INLINE CAR LOGIC ---
+  const handleOpenInlineCarAdd = (clientId) => {
+    setIsInlineCarEditMode(false);
+    setInlineCarFormData({ id: '', license_plate: '', make: '', model: '', year: '', color: '', owner_id: clientId });
+    setInlineCarModalOpen(true);
+  };
+
+  const handleOpenInlineCarEdit = (car) => {
+    setIsInlineCarEditMode(true);
+    setInlineCarFormData({
+      id: car.id || '', 
+      license_plate: car.license_plate || '',
+      make: car.make || '',
+      model: car.model || '',
+      year: car.year || '',
+      color: car.color || '',
+      owner_id: car.owner_id || ''
+    });
+    setInlineCarModalOpen(true);
+  };
+
+  const handleInlineCarSubmit = async () => {
+    if (!inlineCarFormData.license_plate?.trim() || !inlineCarFormData.make?.trim() || !inlineCarFormData.model?.trim() || !inlineCarFormData.year?.toString().trim() || !inlineCarFormData.color?.trim()) {
+        ModalSwal.fire({ icon: "error", title: "Missing Fields", text: "Please fill out all vehicle details." });
+        return; 
+    }
+
+    const url = isInlineCarEditMode ? `${API_BASE_URL}/cars/${inlineCarFormData.id}` : `${API_BASE_URL}/cars`;
+    const method = isInlineCarEditMode ? "PUT" : "POST";
+    
+    const payload = {
+        license_plate: inlineCarFormData.license_plate,
+        make: inlineCarFormData.make,
+        model: inlineCarFormData.model,
+        year: inlineCarFormData.year,
+        color: inlineCarFormData.color,
+        owner_id: inlineCarFormData.owner_id,
+        addedBy: (user?.username || 'ADM').substring(0, 3).toUpperCase()
+    };
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        await loadAllCars(); // Refresh cars silently
+        setInlineCarModalOpen(false);
+        Swal.fire({ title: "Success!", text: "Vehicle details updated!", icon: "success", timer: 1500, showConfirmButton: false });
+      } else {
+        const errData = await res.json();
+        ModalSwal.fire({ icon: "error", title: "Server Error", text: errData.error || 'Failed to save vehicle' });
+      }
+    } catch (err) { 
+      console.error(err); 
+      ModalSwal.fire({ icon: "error", title: "Oops...", text: "Something went wrong! Please try again in a few minutes." });
+    }
+  };
+
+  const handleInlineDeleteCar = (id, plate) => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: `Do you want to unlink and delete vehicle ${plate}?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel"
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/cars/${id}`, { method: 'DELETE' });
+          if (res.ok) {
+            loadAllCars();
+            Swal.fire("Deleted!", "The vehicle has been removed.", "success");
+          } else {
+            Swal.fire({ icon: "error", title: "Oops...", text: "Failed to delete from server." });
+          }
+        } catch (err) { console.error(err); }
+      }
+    });
+  };
+
 
   const handleExportByStatus = (status) => {
     const filteredData = clients.filter(c => normalize(c.status) === normalize(status));
@@ -493,7 +571,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     { 
       accessorKey: "type", 
       header: "Type", 
-      // FIX: Maps database values to custom UI strings in the table column
       Cell: ({ cell }) => {
         const rawValue = cell.getValue()?.toLowerCase().trim();
         const displayValue = clientTypeDisplayMap[rawValue] || cell.getValue()?.toUpperCase();
@@ -571,13 +648,50 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
           return (
             <Box sx={{ p: 2, backgroundColor: '#fcfcfc' }}>
               <Grid container spacing={4}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" sx={{fontWeight:'bold'}}><CarIcon fontSize="small" /> Vehicles</Typography>
-                  <List sx={{ bgcolor: 'background.paper', border: '1px solid #eee' }}>{clientVehicles.map((car) => (<ListItem key={car.id}><ListItemText primary={`${car.make} ${car.model}`} secondary={`Plate: ${car.license_plate?.split('\r')[0]}`} /></ListItem>))}</List>
+                <Grid item xs={12} md={8}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                      <Typography variant="subtitle2" sx={{fontWeight:'bold'}}><CarIcon fontSize="small" /> Vehicles</Typography>
+                      {user?.role === 'admin' && (
+                          <Button size="small" startIcon={<AddIcon />} variant="outlined" onClick={() => handleOpenInlineCarAdd(row.original.id)}>
+                              Add Vehicle
+                          </Button>
+                      )}
+                  </Stack>
+                  {clientVehicles.length === 0 ? (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', p: 2, border: '1px dashed #ccc', borderRadius: 1 }}>
+                          No vehicles linked to this client.
+                      </Typography>
+                  ) : (
+                      <List sx={{ bgcolor: 'background.paper', border: '1px solid #eee', borderRadius: 1, p: 0 }}>
+                          {clientVehicles.map((car, index) => (
+                              <React.Fragment key={car.id}>
+                                  <ListItem 
+                                      secondaryAction={
+                                          user?.role === 'admin' ? (
+                                              <Stack direction="row">
+                                                  <IconButton edge="end" onClick={() => handleOpenInlineCarEdit(car)}><EditIcon fontSize="small" /></IconButton>
+                                                  <IconButton edge="end" color="error" onClick={() => handleInlineDeleteCar(car.id, car.license_plate)}><DeleteIcon fontSize="small" /></IconButton>
+                                              </Stack>
+                                          ) : null
+                                      }
+                                  >
+                                      <ListItemText 
+                                          primary={`${car.make} ${car.model}`} 
+                                          secondary={`Plate: ${car.license_plate?.split('\r')[0]} | Year: ${car.year} | Color: ${car.color}`} 
+                                      />
+                                  </ListItem>
+                                  {index < clientVehicles.length - 1 && <Divider />}
+                              </React.Fragment>
+                          ))}
+                      </List>
+                  )}
                 </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" sx={{fontWeight:'bold'}}><PermitIcon fontSize="small" /> Billing</Typography>
-                  <Paper variant="outlined" sx={{p:2}}>Fee: ${row.original.feeCharged || '0'}.00<br/>Permits: {row.original.permitNumber || 'None'}</Paper>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="subtitle2" sx={{fontWeight:'bold', mb: 1}}><PermitIcon fontSize="small" /> Billing</Typography>
+                  <Paper variant="outlined" sx={{p:2, backgroundColor: '#fff'}}>
+                      <Typography variant="body2" sx={{mb: 0.5}}><strong>Monthly Fee:</strong> ${row.original.feeCharged || '0'}.00</Typography>
+                      <Typography variant="body2"><strong>Permit Number:</strong> {row.original.permitNumber || 'None'}</Typography>
+                  </Paper>
                 </Grid>
               </Grid>
             </Box>
@@ -585,6 +699,37 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         }}
       />
 
+      {/* --- INLINE CAR ADD/EDIT MODAL --- */}
+      <Dialog open={inlineCarModalOpen} onClose={() => setInlineCarModalOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle sx={{fontWeight:'bold', borderBottom: '1px solid #eee', mb: 2}}>
+            {isInlineCarEditMode ? "Edit Vehicle" : "Add Vehicle to Client"}
+        </DialogTitle>
+        <DialogContent>
+            <Grid container spacing={2} sx={{mt: 1}}>
+                <Grid item xs={12}>
+                    <TextField fullWidth required label="License Plate" value={inlineCarFormData.license_plate} error={inlineCarFormData.license_plate === ""} onChange={(e) => setInlineCarFormData({...inlineCarFormData, license_plate: e.target.value})} />
+                </Grid>
+                <Grid item xs={6}>
+                    <TextField fullWidth required label="Make" value={inlineCarFormData.make} error={inlineCarFormData.make === ""} onChange={(e) => setInlineCarFormData({...inlineCarFormData, make: e.target.value})} />
+                </Grid>
+                <Grid item xs={6}>
+                    <TextField fullWidth required label="Model" value={inlineCarFormData.model} error={inlineCarFormData.model === ""} onChange={(e) => setInlineCarFormData({...inlineCarFormData, model: e.target.value})} />
+                </Grid>
+                <Grid item xs={6}>
+                    <TextField fullWidth required label="Year" value={inlineCarFormData.year} error={inlineCarFormData.year === ""} onChange={(e) => setInlineCarFormData({...inlineCarFormData, year: e.target.value})} />
+                </Grid>
+                <Grid item xs={6}>
+                    <TextField fullWidth required label="Color" value={inlineCarFormData.color} error={inlineCarFormData.color === ""} onChange={(e) => setInlineCarFormData({...inlineCarFormData, color: e.target.value})} />
+                </Grid>
+            </Grid>
+        </DialogContent>
+        <DialogActions sx={{p: 3}}>
+            <Button onClick={() => setInlineCarModalOpen(false)}>Cancel</Button>
+            <Button variant="contained" onClick={handleInlineCarSubmit}>{isInlineCarEditMode ? "Save Changes" : "Create Vehicle"}</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* MAIN CLIENT MODAL */}
       <Dialog open={modalOpen} onClose={handleDialogClose} fullWidth maxWidth="sm">
         <DialogTitle sx={{fontWeight:'bold', borderBottom: '1px solid #eee', mb: 2}}>
             {flowStep === 2 ? "Step 2: Associate Vehicle" : (isEditMode ? "Edit Client" : "Step 1: Add New Client")}
@@ -636,7 +781,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
                             setFormData({...formData, type: newType, permitNumber: generatedPermit});
                           }}
                         >
-                            {/* FIX: Maps database values to custom UI strings in the dropdown menu */}
                             <MenuItem value="tenant">Bank of America</MenuItem>
                             <MenuItem value="employee">Horizon</MenuItem>
                             <MenuItem value="payer">Payer</MenuItem>
