@@ -37,6 +37,13 @@ const ModalSwal = Swal.mixin({
   }
 });
 
+// FIX: Added a mapping dictionary for the UI display of Client Types
+const clientTypeDisplayMap = {
+  'tenant': 'Bank of America',
+  'employee': 'Horizon',
+  'payer': 'Payer'
+};
+
 export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, initialFilter }) {
   const [clients, setClients] = useState([]);
   const [allCars, setAllCars] = useState([]);
@@ -48,6 +55,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
   const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({ firstName: '', lastName: '', type: 'tenant', status: 'active', permitNumber: '', feeCharged: '0', id: null });
 
+  // --- NEW MULTI-STEP FLOW STATES ---
   const [flowMode, setFlowMode] = useState('client-only'); 
   const [flowStep, setFlowStep] = useState(1); 
   const [newlyCreatedClientId, setNewlyCreatedClientId] = useState(null);
@@ -482,7 +490,16 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
       header: "Full Name",
       accessorFn: (row) => `${row.firstName || ''} ${row.lastName || ''}`.trim(),
     },
-    { accessorKey: "type", header: "Type", Cell: ({ cell }) => <Chip label={cell.getValue()?.toUpperCase()} variant="outlined" size="small" /> },
+    { 
+      accessorKey: "type", 
+      header: "Type", 
+      // FIX: Maps database values to custom UI strings in the table column
+      Cell: ({ cell }) => {
+        const rawValue = cell.getValue()?.toLowerCase().trim();
+        const displayValue = clientTypeDisplayMap[rawValue] || cell.getValue()?.toUpperCase();
+        return <Chip label={displayValue} variant="outlined" size="small" />
+      }
+    },
     { accessorKey: "status", header: "Status", Cell: ({ cell }) => (<Chip label={cell.getValue()?.toUpperCase()} color={normalize(cell.getValue()) === 'active' ? 'success' : 'default'} size="small" />) },
     { accessorKey: "permitNumber", header: "Permit #" },
     { accessorKey: "feeCharged", header: "Cost", Cell: ({ cell }) => <Typography sx={{ fontWeight: 'bold', color: 'success.main' }}>${cell.getValue() || "0"}</Typography> },
@@ -522,7 +539,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         data={displayedClients}
         state={{ globalFilter }}
         onGlobalFilterChange={setGlobalFilter}
-        enableRowActions={user?.role === 'admin'} // FIX: Hide actions column for read-only users
+        enableRowActions={user?.role === 'admin'} 
         renderTopToolbarCustomActions={() => (
           <Box sx={{ display: 'flex', gap: '10px' }}>
             {user?.role === 'admin' && (
@@ -619,8 +636,9 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
                             setFormData({...formData, type: newType, permitNumber: generatedPermit});
                           }}
                         >
-                            <MenuItem value="tenant">Tenant</MenuItem>
-                            <MenuItem value="employee">Employee</MenuItem>
+                            {/* FIX: Maps database values to custom UI strings in the dropdown menu */}
+                            <MenuItem value="tenant">Bank of America</MenuItem>
+                            <MenuItem value="employee">Horizon</MenuItem>
                             <MenuItem value="payer">Payer</MenuItem>
                         </TextField>
                     </Grid>
