@@ -38,21 +38,6 @@ export default function LoginPage({ onLogin }) {
     }
   }
 
-  const demoLogin = async (user, pwd) => {
-    setUsername(user)
-    setPassword(pwd)
-    const res = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: user, password: pwd }),
-    })
-    if (res.ok) {
-      const userData = await res.json()
-      localStorage.setItem("user", JSON.stringify(userData))
-      onLogin(userData)
-    }
-  }
-
   return (
     <div className="login-container">
       <div className="login-card">
@@ -88,16 +73,6 @@ export default function LoginPage({ onLogin }) {
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
-
-        <div className="demo-section">
-          <p>Demo Accounts</p>
-          <button type="button" className="btn-demo" onClick={() => demoLogin("artie", "2020")} disabled={loading}>
-            Admin (artie / 2020)
-          </button>
-          <button type="button" className="btn-demo" onClick={() => demoLogin("frontdesk", "1234")} disabled={loading}>
-            Front Desk (frontdesk / 1234)
-          </button>
-        </div>
       </div>
     </div>
   )
