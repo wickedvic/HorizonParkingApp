@@ -152,7 +152,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     const monthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
     const printWindow = window.open('', '_blank');
     
-    // FIX: Updated to HHLogo.png and adjusted CSS sizing
     printWindow.document.write(`
       <html>
         <head>
@@ -198,7 +197,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     if (selectedMonth === null) return; 
     const printWindow = window.open('', '_blank');
     
-    // FIX: Updated to HHLogo.png and adjusted CSS sizing
     printWindow.document.write(`
       <html>
         <head>
@@ -241,7 +239,6 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
     const rightCol = clientPayments.slice(mid);
     const printWindow = window.open('', '_blank');
     
-    // FIX: Updated to HHLogo.png and adjusted CSS sizing
     printWindow.document.write(`
       <html>
         <head>
@@ -525,7 +522,7 @@ export default function ClientsPage({ user, onNavigateCar, onNavigatePermit, ini
         data={displayedClients}
         state={{ globalFilter }}
         onGlobalFilterChange={setGlobalFilter}
-        enableRowActions
+        enableRowActions={user?.role === 'admin'} // FIX: Hide actions column for read-only users
         renderTopToolbarCustomActions={() => (
           <Box sx={{ display: 'flex', gap: '10px' }}>
             {user?.role === 'admin' && (
