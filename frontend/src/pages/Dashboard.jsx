@@ -160,7 +160,7 @@ export default function Dashboard({ user, onLogout }) {
               alt="Horizon Logo" 
               style={{ width: '32px', height: '32px', verticalAlign: 'middle', marginRight: '10px', borderRadius: '4px' }} 
             />
-            HH Parking
+            Horizon Parking
           </h3>
         </div>
         <nav className="sidebar-nav">
