@@ -153,21 +153,21 @@ export default function Dashboard({ user, onLogout }) {
     <div className="dashboard">
       <aside className="dashboard-sidebar">
         <div className="sidebar-brand">
-          <h1>
+          <h2>
             {/* FIX: Replaced emoji with the imported image. Make sure HHLogo.png is in your public folder! */}
             <img 
               src="/HHLogo.png" 
               alt="Horizon Logo" 
               style={{ width: '32px', height: '32px', verticalAlign: 'middle', marginRight: '10px', borderRadius: '4px' }} 
             />
-            Horizon Parking
-          </h1>
+            HH Parking
+          </h2>
         </div>
         <nav className="sidebar-nav">
-          <button className={`nav-btn ${currentPage === "dashboard" ? "active" : ""}`} onClick={() => navTo("dashboard")}>📊 Dashboard</button>
-          <button className={`nav-btn ${currentPage === "clients" ? "active" : ""}`} onClick={() => navTo("clients")}>👥 Clients</button>
-          <button className={`nav-btn ${currentPage === "cars" ? "active" : ""}`} onClick={() => navTo("cars")}>🚙 Vehicles</button>
-          <button className={`nav-btn ${currentPage === "permits" ? "active" : ""}`} onClick={() => navTo("permits")}>🎫 Temporary Permits</button>
+          <button className={`nav-btn ${currentPage === "dashboard" ? "active" : ""}`} onClick={() => navTo("dashboard")}>Dashboard</button>
+          <button className={`nav-btn ${currentPage === "clients" ? "active" : ""}`} onClick={() => navTo("clients")}>Clients</button>
+          <button className={`nav-btn ${currentPage === "cars" ? "active" : ""}`} onClick={() => navTo("cars")}>Vehicles</button>
+          <button className={`nav-btn ${currentPage === "permits" ? "active" : ""}`} onClick={() => navTo("permits")}>Temporary Permits</button>
         </nav>
         <div className="sidebar-footer">
           <div className="user-info">Logged in as <strong>{user.username}</strong></div>
