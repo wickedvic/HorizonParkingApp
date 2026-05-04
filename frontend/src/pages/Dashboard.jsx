@@ -153,7 +153,7 @@ export default function Dashboard({ user, onLogout }) {
     <div className="dashboard">
       <aside className="dashboard-sidebar">
         <div className="sidebar-brand">
-          <h2>
+          <h3>
             {/* FIX: Replaced emoji with the imported image. Make sure HHLogo.png is in your public folder! */}
             <img 
               src="/HHLogo.png" 
@@ -161,7 +161,7 @@ export default function Dashboard({ user, onLogout }) {
               style={{ width: '32px', height: '32px', verticalAlign: 'middle', marginRight: '10px', borderRadius: '4px' }} 
             />
             HH Parking
-          </h2>
+          </h3>
         </div>
         <nav className="sidebar-nav">
           <button className={`nav-btn ${currentPage === "dashboard" ? "active" : ""}`} onClick={() => navTo("dashboard")}>Dashboard</button>
